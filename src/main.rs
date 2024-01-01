@@ -1,7 +1,5 @@
-use std::io::{stdout, Write, stdin};
-
 use clap::Parser;
-
+use std::io::{stdin, stdout, Write};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -9,7 +7,6 @@ struct Cli {
     /// To access the REPL
     #[arg(short, long)]
     repl: bool,
-
 }
 
 fn main() {
@@ -36,5 +33,4 @@ fn main() {
             }
         }
     }
-    
 }
