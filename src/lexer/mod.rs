@@ -9,13 +9,13 @@ enum FpsError {
     UnrecognizedChar(char, usize),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TokenType {
     // single char
     Fps, // #
     Semicolon,
-    Colon,
     Equals,
+    Colon,
     OpenParen,
     CloseParen,
     OpenBrace,
@@ -45,7 +45,7 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum LiteralValue {
     Int(i64),
     Float(f64),
@@ -53,7 +53,7 @@ pub enum LiteralValue {
     Identifier(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Token {
     token_type: TokenType,
     lexeme: String,
@@ -119,27 +119,15 @@ impl<'a> FpsInput<'a> {
     }
 
     pub fn scan_tokens(&mut self) -> Result<()> {
-        // let lines = self.input.lines();
-        // for (line_number, line) in lines.enumerate() {
-        //     let mut iter = line.chars().into_iter().peekable();
-        // let mut iter = self.input.chars().into_iter().peekable();
-
-        // let mut pos = 0;
-        // while let Some(ch) = iter.next() {
-        //     pos += 1;
-        //     println!("char {ch}");
-        //     self.start = self.current;
-        //     let token = self.tokenzine(ch, pos)?;
-        //     self.tokens.push(token)
-        // }
-
-        // let mut pos = 0;
         while !self.is_at_end() {
-            // pos += 1;
             self.line += 1;
             self.start = self.current;
             if let Some(token) = self.tokenzine()? {
-                self.tokens.push(token)
+                // ignore whitespaces
+                match token.token_type {
+                    TokenType::Whitespace | TokenType::Eof => {}
+                    _ => self.tokens.push(token)
+                }
             } else {
                 break;
             }
@@ -150,13 +138,13 @@ impl<'a> FpsInput<'a> {
         Ok(())
     }
 
-    fn peek_next(&mut self) -> Result<Option<char>> {
+    fn peek(&mut self) -> Result<Option<char>> {
         let ch = self.input.chars().nth(self.current);
         Ok(ch)
     }
 
     fn advance(&mut self) -> Result<Option<char>> {
-        let ch = self.peek_next();
+        let ch = self.peek();
         self.current += 1;
         ch
     }
@@ -164,7 +152,7 @@ impl<'a> FpsInput<'a> {
     fn read_until_eol(&mut self) -> String {
         let mut rem = "".to_string();
         loop {
-            match self.peek_next() {
+            match self.peek() {
                 Ok(is_next) => {
                     if let Some(next) = is_next {
                         if next == '\n' || next == '\r' {
@@ -185,7 +173,7 @@ impl<'a> FpsInput<'a> {
     }
 
     fn is_next_char_match(&mut self, ch: char) -> bool {
-        match self.peek_next() {
+        match self.peek() {
             Ok(is_next) => {
                 if let Some(next) = is_next {
                     if next == ch {
@@ -206,9 +194,11 @@ impl<'a> FpsInput<'a> {
         if let Ok(Some(ch)) = self.advance() {
             let token = match ch {
                 // whitespaces
-                ' ' => token!(Whitespace, ch, self.line, self.current),
-                '\n' => token!(Whitespace, ch, self.line, self.current),
-                '\r' => token!(Whitespace, ch, self.line, self.current),
+                ' ' | '\t' => token!(Whitespace, ch, self.line, self.current),
+                '\n' | '\r' => {
+                    self.line += 1;
+                    token!(Whitespace, ch, self.line, self.current)
+                }
                 // operations
                 '+' => token!(Plus, ch, self.line, self.current),
                 '-' => token!(Minus, ch, self.line, self.current),
@@ -283,5 +273,28 @@ impl<'a> FpsInput<'a> {
             return Ok(Some(token));
         }
         Ok(None)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn single_char_tokens() {
+        use TokenType::*;
+        let expected = vec![
+            Fps, Semicolon, Equals, Colon, OpenParen, CloseParen, OpenBrace, CloseBrace, Plus, Minus, Star, Slash, Eof
+        ];
+
+        let input = "#;=:(){}+-*/";
+        let mut scanner = FpsInput::new(input);
+        let _ = scanner.scan_tokens();
+
+        assert_eq!(scanner.tokens.len(), 13); //Eof counts as a Token
+        assert_eq!(
+            scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
+            expected
+        );
     }
 }
