@@ -19,7 +19,7 @@ fn execute(input: &str) -> Result<()> {
     scanner.scan_tokens()?;
 
     for token in scanner.tokens {
-        println!("{:?}", token);
+        println!("Token {}", token);
     }
 
     Ok(())
