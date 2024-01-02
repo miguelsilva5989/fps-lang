@@ -7,6 +7,8 @@ use thiserror::Error;
 enum FpsError {
     #[error("Unrecognized char '{0}' at line {1}")]
     UnrecognizedChar(char, usize),
+    #[error("Unterminated consumption until char '{0:?}' at line {2}. Consumed: {1}")]
+    UnterminatedConsumption(Vec<char>, String, usize),
 }
 
 #[derive(Debug, PartialEq)]
@@ -126,7 +128,7 @@ impl<'a> FpsInput<'a> {
                 // ignore whitespaces
                 match token.token_type {
                     TokenType::Whitespace => {}
-                    _ => self.tokens.push(token)
+                    _ => self.tokens.push(token),
                 }
             } else {
                 break;
@@ -149,16 +151,16 @@ impl<'a> FpsInput<'a> {
         ch
     }
 
-    fn read_until_eol(&mut self) -> String {
-        let mut rem = "".to_string();
+    fn consume_until(&mut self, chars: Vec<char>) -> Result<String> {
+        let mut consumed = "".to_string();
         loop {
             match self.peek() {
                 Ok(is_next) => {
                     if let Some(next) = is_next {
-                        if next == '\n' || next == '\r' {
+                        if chars.contains(&next) {
                             break;
                         } else {
-                            rem.push_str(next.to_string().as_str());
+                            consumed.push_str(next.to_string().as_str());
                             self.current += 1;
                         }
                     } else {
@@ -166,10 +168,10 @@ impl<'a> FpsInput<'a> {
                     }
                 }
                 //Eof
-                Err(_) => break,
+                Err(_) => return Err(FpsError::UnterminatedConsumption(chars, consumed, self.line).into()),
             }
         }
-        rem
+        Ok(consumed)
     }
 
     fn is_next_char_match(&mut self, ch: char) -> bool {
@@ -190,6 +192,16 @@ impl<'a> FpsInput<'a> {
         }
     }
 
+    fn read_until_eol(&mut self) -> Result<String> {
+        self.consume_until(vec!['\n', '\r'])
+    }
+
+    fn consume_string(&mut self) -> Result<String> {
+        let consumed = self.consume_until(vec!['"']);
+        self.current += 1;
+        consumed
+    }
+
     fn tokenzine(&mut self) -> Result<Option<Token>> {
         if let Ok(Some(ch)) = self.eat() {
             let token = match ch {
@@ -207,7 +219,7 @@ impl<'a> FpsInput<'a> {
                     // comments are read until Eol
                     if self.is_next_char_match('/') {
                         self.current += 1;
-                        let comment = self.read_until_eol();
+                        let comment = self.read_until_eol()?;
                         token!(Comment, comment, self.line, self.current)
                     } else {
                         token!(Slash, ch, self.line, self.current)
@@ -223,14 +235,18 @@ impl<'a> FpsInput<'a> {
                 '}' => token!(CloseBrace, ch, self.line, self.current),
                 ':' => {
                     if self.is_next_char_match('=') {
-                        self.eat()?;
+                        self.current += 1;
                         token!(Assign, ":=", self.line, self.current)
                     } else {
                         token!(Colon, ch, self.line, self.current)
                     }
                 }
+                // string literal
+                '"' => {
+                    let string_literal = self.consume_string()?;
+                    token!(String, ch, Some(LiteralValue::String(string_literal)), self.line, self.current)
+                },
 
-                // '+' | '-' | '*' | '/' | '%' => tokens.push(Token::new(ch.into(), TokenType::BinaryOperator)),
                 _ => {
                     self.current += 1;
                     return Err(FpsError::UnrecognizedChar(ch, self.line).into());
@@ -286,7 +302,7 @@ mod tests {
         use TokenType::*;
         let input = "# ; = : ( ) { } + - * /";
         let expected = vec![
-            Fps, Semicolon, Equals, Colon, OpenParen, CloseParen, OpenBrace, CloseBrace, Plus, Minus, Star, Slash, Eof
+            Fps, Semicolon, Equals, Colon, OpenParen, CloseParen, OpenBrace, CloseBrace, Plus, Minus, Star, Slash, Eof,
         ];
 
         let mut scanner = FpsInput::new(input);
@@ -303,9 +319,7 @@ mod tests {
     fn two_char_tokens() {
         use TokenType::*;
         let input = ":=";
-        let expected = vec![
-            Assign, Eof
-        ];
+        let expected = vec![Assign, Eof];
 
         let mut scanner = FpsInput::new(input);
         let _ = scanner.scan_tokens();
@@ -321,15 +335,32 @@ mod tests {
     fn comment() {
         use TokenType::*;
         let input = "//I am a comment";
-        let expected = vec![
-            Comment, Eof
-        ];
+        let expected = vec![Comment, Eof];
 
         let mut scanner = FpsInput::new(input);
         let _ = scanner.scan_tokens();
 
         assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
         assert_eq!(scanner.tokens[0].lexeme, "I am a comment");
+        assert_eq!(
+            scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
+            expected
+        );
+    }
+
+    #[test]
+    fn string_literal() {
+        use TokenType::*;
+        let input = "\"I am a string literal\"";
+        let expected = vec![String, Eof];
+
+        let mut scanner = FpsInput::new(input);
+        let _ = scanner.scan_tokens();
+
+        println!("{:?}", scanner.tokens);
+
+        assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
+        assert_eq!(scanner.tokens[0].literal, Some(LiteralValue::String("I am a string literal".to_owned())));
         assert_eq!(
             scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
             expected
