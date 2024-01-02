@@ -44,6 +44,7 @@ pub enum TokenType {
     // Ignore
     Comment,
     Whitespace,
+    Eol,
     Eof,
 }
 
@@ -192,7 +193,7 @@ impl<'a> FpsInput<'a> {
         }
     }
 
-    fn read_until_eol(&mut self) -> Result<String> {
+    fn consume_until_eol(&mut self) -> Result<String> {
         self.consume_until(vec!['\n', '\r'])
     }
 
@@ -226,6 +227,30 @@ impl<'a> FpsInput<'a> {
         consumed
     }
 
+    fn consume_identifier(&mut self) -> String {
+        let mut consumed = "".to_owned();
+        loop {
+            match self.peek() {
+                Ok(is_next) => {
+                    if let Some(next) = is_next {
+                        if next.is_alphanumeric() {
+                            consumed.push_str(next.to_string().as_str());
+                            self.current += 1;
+                        } else {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                //Eof
+                Err(_) => break,
+            }
+        }
+
+        consumed
+    }
+
     fn tokenzine(&mut self) -> Result<Option<Token>> {
         if let Ok(Some(ch)) = self.eat() {
             use TokenType::*;
@@ -234,7 +259,7 @@ impl<'a> FpsInput<'a> {
                 ' ' | '\t' => self.create_token(Whitespace, ch.into(), None),
                 '\n' | '\r' => {
                     self.line += 1;
-                    self.create_token(Whitespace, ch.into(), None)
+                    self.create_token(Eol, ch.into(), None)
                 }
                 // operations
                 '+' => self.create_token(Plus, ch.into(), None),
@@ -244,7 +269,7 @@ impl<'a> FpsInput<'a> {
                     // comments are read until Eol
                     if self.is_next_char_match('/') {
                         self.current += 1;
-                        let comment = self.read_until_eol()?;
+                        let comment = self.consume_until_eol()?;
                         self.create_token(Comment, comment.into(), None)
                     } else {
                         self.create_token(Slash, ch.into(), None)
@@ -278,45 +303,26 @@ impl<'a> FpsInput<'a> {
                         num.push_str(self.consume_number().as_str());
 
                         self.create_token(Number, num.clone(), Some(LiteralValue::Int(num.parse::<i64>().unwrap())))
+                    } else if ch.is_alphabetic() {
+                        let mut id: std::string::String = ch.into();
+                        id.push_str(self.consume_identifier().as_str());
+
+                        self.create_token(Identifer, id.clone(), Some(LiteralValue::Identifier(id)))
+
+                        // // if RESERVED.contains(&id.as_str()) {
+                        // //     match id.as_str() {
+                        // //         "None" => tokens.push(Token::new(id, TokenType::None)),
+                        // //         _ => panic!("need to implement reserverd '{}' keywork in tokenizer", id),
+                        // //     }
+                        // // } else {
+                        // //     tokens.push(Token::new(id, TokenType::Identifier));
+                        // // }
+                        // todo!()
                     } else {
                         self.current += 1;
                         return Err(FpsError::UnrecognizedChar(ch, self.line).into());
                     }
-                } // _ => {
-                  //     if ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t' {
-                  //         // ignore whitespaces
-                  //     } else if ch.is_numeric() {
-                  //         let mut num: String = ch.into();
-                  //         while let Some(next) = iter.peek() {
-                  //             if next.is_numeric() {
-                  //                 num.push(iter.next().unwrap());
-                  //             } else {
-                  //                 break;
-                  //             }
-                  //         }
-                  //         tokens.push(Token::new(num, TokenType::Number));
-                  //     } else if ch.is_alphabetic() {
-                  //         let mut id: String = ch.into();
-                  //         while let Some(next) = iter.peek() {
-                  //             if next.is_alphanumeric() || next == &'_' {
-                  //                 id.push(iter.next().unwrap());
-                  //             } else {
-                  //                 break;
-                  //             }
-                  //         }
-
-                  //         if RESERVED.contains(&id.as_str()) {
-                  //             match id.as_str() {
-                  //                 "None" => tokens.push(Token::new(id, TokenType::None)),
-                  //                 _ => panic!("need to implement reserverd '{}' keywork in tokenizer", id),
-                  //             }
-                  //         } else {
-                  //             tokens.push(Token::new(id, TokenType::Identifier));
-                  //         }
-                  //     } else {
-                  //         panic!("Token '{}' is not yet implemented", ch);
-                  //     }
-                  // }
+                }
             };
 
             return Ok(Some(token));
@@ -332,7 +338,6 @@ mod tests {
 
     #[test]
     fn single_char_tokens() {
-        
         let input = "# ; = : ( ) { } + - * /";
         let expected = vec![
             Fps, Semicolon, Equals, Colon, OpenParen, CloseParen, OpenBrace, CloseBrace, Plus, Minus, Star, Slash, Eof,
@@ -366,12 +371,12 @@ mod tests {
     #[test]
     fn comment() {
         let input = "//I am a comment\n";
-        let expected = vec![Comment, Eof];
+        let expected = vec![Comment, Eol, Eof];
 
         let mut scanner = FpsInput::new(input);
         let _ = scanner.scan_tokens();
 
-        assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
+        assert_eq!(scanner.tokens.len(), 3); //Eof counts as a Token
         assert_eq!(scanner.tokens[0].lexeme, "I am a comment");
         assert_eq!(
             scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
@@ -407,10 +412,23 @@ mod tests {
         let _ = scanner.scan_tokens();
 
         assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
+        assert_eq!(scanner.tokens[0].literal, Some(LiteralValue::Int(123)));
         assert_eq!(
-            scanner.tokens[0].literal,
-            Some(LiteralValue::Int(123))
+            scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
+            expected
         );
+    }
+
+    #[test]
+    fn identifer_literal() {
+        let input = "id";
+        let expected = vec![Identifer, Eof];
+
+        let mut scanner = FpsInput::new(input);
+        let _ = scanner.scan_tokens();
+
+        assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
+        assert_eq!(scanner.tokens[0].literal, Some(LiteralValue::Identifier("id".to_owned())));
         assert_eq!(
             scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
             expected
