@@ -29,18 +29,17 @@ fn run_prompt() -> Result<()> {
     println!("REPL for FPS Lang");
     println!("-----------------");
     println!("Type '\\q' or press 'Ctrl+Z' to exit");
-    let mut quit = false;
     let mut buffer = String::new();
-    while !quit {
+    loop {
         buffer.clear();
         print!("fps> ");
         stdout().flush()?;
         stdin().read_line(&mut buffer)?;
         // remove LF
-        // buffer = buffer.as_str().trim_end().to_string();
-        execute(&buffer)?;
+        buffer = buffer.as_str().trim_end().to_string();
+
         if buffer == "\\q" {
-            quit = true;
+            break;
         }
 
         execute(&buffer)?;

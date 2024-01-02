@@ -35,13 +35,9 @@ pub enum TokenType {
     Print,
     Println,
 
-    // end of file
+    // Ignore
+    Whitespace,
     Eof,
-}
-impl Display for TokenType {
-    fn fmt(&self, format: &mut Formatter) -> fmt::Result {
-        write!(format, "{}", self)
-    }
 }
 
 #[derive(Debug)]
@@ -50,11 +46,6 @@ pub enum LiteralValue {
     Float(f64),
     String(String),
     Identifier(String),
-}
-impl Display for LiteralValue {
-    fn fmt(&self, format: &mut Formatter) -> fmt::Result {
-        write!(format, "{}", self)
-    }
 }
 
 #[derive(Debug)]
@@ -70,7 +61,7 @@ impl Display for Token {
     fn fmt(&self, format: &mut Formatter) -> fmt::Result {
         write!(
             format,
-            "{} {} {:?} pos: {}-{}",
+            "{:?} {} {:?} pos: {}-{}",
             self.token_type, self.lexeme, self.literal, self.line, self.pos
         )
     }
@@ -145,7 +136,7 @@ impl<'a> FpsInput<'a> {
             if let Some(token) = self.tokenzine()? {
                 self.tokens.push(token)
             } else {
-
+                break;
             }
         }
 
@@ -162,7 +153,6 @@ impl<'a> FpsInput<'a> {
 
     fn tokenzine(&mut self) -> Result<Option<Token>> {
         if let Ok(Some(ch)) = self.advance() {
-            println!("char {ch}");
             let token = match ch {
                 '#' => token!(Fps, ch, self.line, self.current),
                 ';' => token!(Semicolon, ch, self.line, self.current),
@@ -172,14 +162,16 @@ impl<'a> FpsInput<'a> {
                 ')' => token!(CloseParen, ch, self.line, self.current),
                 '{' => token!(OpenBrace, ch, self.line, self.current),
                 '}' => token!(CloseBrace, ch, self.line, self.current),
+                // operations
                 '+' => token!(Plus, ch, self.line, self.current),
                 '-' => token!(Minus, ch, self.line, self.current),
                 '*' => token!(Star, ch, self.line, self.current),
                 '/' => token!(Slash, ch, self.line, self.current),
 
                 // '+' | '-' | '*' | '/' | '%' => tokens.push(Token::new(ch.into(), TokenType::BinaryOperator)),
-                '\n' => token!(Eof, ch, self.line, self.current),
-                '\r' => token!(Eof, ch, self.line, self.current),
+                ' ' => token!(Whitespace, ch, self.line, self.current),
+                '\n' => token!(Whitespace, ch, self.line, self.current),
+                '\r' => token!(Whitespace, ch, self.line, self.current),
                 _ => {
                     self.current += 1;
                     return Err(FpsError::UnrecognizedChar(ch, self.line).into());
