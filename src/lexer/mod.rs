@@ -50,7 +50,7 @@ pub enum TokenType {
 #[derive(Debug, PartialEq)]
 pub enum LiteralValue {
     Int(i64),
-    Float(f64),
+    // Float(f64),
     String(String),
     Identifier(String),
 }
@@ -68,7 +68,7 @@ impl Display for Token {
     fn fmt(&self, format: &mut Formatter) -> fmt::Result {
         write!(
             format,
-            "{:?} {} {:?} pos: {}-{}",
+            "{:?} {} {:?} line {} pos {}",
             self.token_type, self.lexeme, self.literal, self.line, self.pos
         )
     }
@@ -107,7 +107,7 @@ impl<'a> FpsInput<'a> {
             tokens: vec![],
             start: 0,
             current: 0,
-            line: 0,
+            line: 1,
         }
     }
 
@@ -121,7 +121,6 @@ impl<'a> FpsInput<'a> {
 
     pub fn scan_tokens(&mut self) -> Result<()> {
         while !self.is_at_end() {
-            self.line += 1;
             self.start = self.current;
             if let Some(token) = self.tokenzine()? {
                 // ignore whitespaces
@@ -134,6 +133,7 @@ impl<'a> FpsInput<'a> {
             }
         }
 
+        self.line += 1;
         self.tokens.push(self.create_token(TokenType::Eof, "".to_owned(), None));
 
         Ok(())
@@ -202,6 +202,30 @@ impl<'a> FpsInput<'a> {
         consumed
     }
 
+    fn consume_number(&mut self) -> String {
+        let mut consumed = "".to_owned();
+        loop {
+            match self.peek() {
+                Ok(is_next) => {
+                    if let Some(next) = is_next {
+                        if next.is_digit(10) {
+                            consumed.push_str(next.to_string().as_str());
+                            self.current += 1;
+                        } else {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                //Eof
+                Err(_) => break,
+            }
+        }
+
+        consumed
+    }
+
     fn tokenzine(&mut self) -> Result<Option<Token>> {
         if let Ok(Some(ch)) = self.eat() {
             use TokenType::*;
@@ -226,7 +250,7 @@ impl<'a> FpsInput<'a> {
                         self.create_token(Slash, ch.into(), None)
                     }
                 }
-                // literals
+                // single char
                 '#' => self.create_token(Fps, ch.into(), None),
                 ';' => self.create_token(Semicolon, ch.into(), None),
                 '=' => self.create_token(Equals, ch.into(), None),
@@ -242,15 +266,22 @@ impl<'a> FpsInput<'a> {
                         self.create_token(Colon, ch.into(), None)
                     }
                 }
-                // string literal
+                // literals
                 '"' => {
                     let string_literal = self.consume_string()?;
                     self.create_token(String, string_literal.clone(), Some(LiteralValue::String(string_literal)))
                 }
 
                 _ => {
-                    self.current += 1;
-                    return Err(FpsError::UnrecognizedChar(ch, self.line).into());
+                    if ch.is_digit(10) {
+                        let mut num: std::string::String = ch.into();
+                        num.push_str(self.consume_number().as_str());
+
+                        self.create_token(Number, num.clone(), Some(LiteralValue::Int(num.parse::<i64>().unwrap())))
+                    } else {
+                        self.current += 1;
+                        return Err(FpsError::UnrecognizedChar(ch, self.line).into());
+                    }
                 } // _ => {
                   //     if ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t' {
                   //         // ignore whitespaces
@@ -297,10 +328,11 @@ impl<'a> FpsInput<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use TokenType::*;
 
     #[test]
     fn single_char_tokens() {
-        use TokenType::*;
+        
         let input = "# ; = : ( ) { } + - * /";
         let expected = vec![
             Fps, Semicolon, Equals, Colon, OpenParen, CloseParen, OpenBrace, CloseBrace, Plus, Minus, Star, Slash, Eof,
@@ -318,7 +350,6 @@ mod tests {
 
     #[test]
     fn two_char_tokens() {
-        use TokenType::*;
         let input = ":=";
         let expected = vec![Assign, Eof];
 
@@ -334,7 +365,6 @@ mod tests {
 
     #[test]
     fn comment() {
-        use TokenType::*;
         let input = "//I am a comment\n";
         let expected = vec![Comment, Eof];
 
@@ -351,7 +381,6 @@ mod tests {
 
     #[test]
     fn string_literal() {
-        use TokenType::*;
         let input = "\"I am a string literal\"";
         let expected = vec![String, Eof];
 
@@ -370,12 +399,34 @@ mod tests {
     }
 
     #[test]
+    fn numeric_literal() {
+        let input = "123";
+        let expected = vec![Number, Eof];
+
+        let mut scanner = FpsInput::new(input);
+        let _ = scanner.scan_tokens();
+
+        assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
+        assert_eq!(
+            scanner.tokens[0].literal,
+            Some(LiteralValue::Int(123))
+        );
+        assert_eq!(
+            scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
+            expected
+        );
+    }
+
+    #[test]
     fn unterminated_consumption() {
         let input = "\"I do not end...";
-        
+
         let mut scanner = FpsInput::new(input);
         let result = scanner.scan_tokens();
 
-        assert_eq!(format!("{}", result.unwrap_err().root_cause()), "Unterminated consumption until char '['\"']' at line 1. Consumed: I do not end...");
+        assert_eq!(
+            format!("{}", result.unwrap_err().root_cause()),
+            "Unterminated consumption until char '['\"']' at line 1. Consumed: I do not end..."
+        );
     }
 }
