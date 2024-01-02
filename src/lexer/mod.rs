@@ -125,7 +125,7 @@ impl<'a> FpsInput<'a> {
             if let Some(token) = self.tokenzine()? {
                 // ignore whitespaces
                 match token.token_type {
-                    TokenType::Whitespace | TokenType::Eof => {}
+                    TokenType::Whitespace => {}
                     _ => self.tokens.push(token)
                 }
             } else {
@@ -143,7 +143,7 @@ impl<'a> FpsInput<'a> {
         Ok(ch)
     }
 
-    fn advance(&mut self) -> Result<Option<char>> {
+    fn eat(&mut self) -> Result<Option<char>> {
         let ch = self.peek();
         self.current += 1;
         ch
@@ -191,7 +191,7 @@ impl<'a> FpsInput<'a> {
     }
 
     fn tokenzine(&mut self) -> Result<Option<Token>> {
-        if let Ok(Some(ch)) = self.advance() {
+        if let Ok(Some(ch)) = self.eat() {
             let token = match ch {
                 // whitespaces
                 ' ' | '\t' => token!(Whitespace, ch, self.line, self.current),
@@ -206,6 +206,7 @@ impl<'a> FpsInput<'a> {
                 '/' => {
                     // comments are read until Eol
                     if self.is_next_char_match('/') {
+                        self.current += 1;
                         let comment = self.read_until_eol();
                         token!(Comment, comment, self.line, self.current)
                     } else {
@@ -222,7 +223,7 @@ impl<'a> FpsInput<'a> {
                 '}' => token!(CloseBrace, ch, self.line, self.current),
                 ':' => {
                     if self.is_next_char_match('=') {
-                        self.advance()?;
+                        self.eat()?;
                         token!(Assign, ":=", self.line, self.current)
                     } else {
                         token!(Colon, ch, self.line, self.current)
@@ -283,15 +284,52 @@ mod tests {
     #[test]
     fn single_char_tokens() {
         use TokenType::*;
+        let input = "# ; = : ( ) { } + - * /";
         let expected = vec![
             Fps, Semicolon, Equals, Colon, OpenParen, CloseParen, OpenBrace, CloseBrace, Plus, Minus, Star, Slash, Eof
         ];
 
-        let input = "#;=:(){}+-*/";
         let mut scanner = FpsInput::new(input);
         let _ = scanner.scan_tokens();
 
         assert_eq!(scanner.tokens.len(), 13); //Eof counts as a Token
+        assert_eq!(
+            scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
+            expected
+        );
+    }
+
+    #[test]
+    fn two_char_tokens() {
+        use TokenType::*;
+        let input = ":=";
+        let expected = vec![
+            Assign, Eof
+        ];
+
+        let mut scanner = FpsInput::new(input);
+        let _ = scanner.scan_tokens();
+
+        assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
+        assert_eq!(
+            scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
+            expected
+        );
+    }
+
+    #[test]
+    fn comment() {
+        use TokenType::*;
+        let input = "//I am a comment";
+        let expected = vec![
+            Comment, Eof
+        ];
+
+        let mut scanner = FpsInput::new(input);
+        let _ = scanner.scan_tokens();
+
+        assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
+        assert_eq!(scanner.tokens[0].lexeme, "I am a comment");
         assert_eq!(
             scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
             expected
