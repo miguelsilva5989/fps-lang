@@ -1,6 +1,10 @@
 # FPS Lang
 
-A "frames per second" meme language to learn how to develop a compiler.
+A "frames per second" meme language 👌
+
+The concept of this language is to execute statements on a *per frame* level.
+
+This is based on the book [Crafting Interpreters](https://craftinginterpreters.com/)
 
 ## Logic
 
@@ -56,7 +60,7 @@ output:
 ##### For loop
 
 ```
-# for 0..=2 { # println(it); # } #
+# for 0..=2 { println(it); } #
 
 output:
 0
@@ -66,7 +70,7 @@ output:
 
 And here is where it gets weird 🤣
 ```
-# for 1..=3 { println("frame {}", it); } # print(" - another print in same frame '1'") #
+# for 1..=3 { print("\nframe {}", it); } # print(" - another print in same frame '1'\n") #
 ^             ^                          ^
 |             |                          |_ frame 1
 |             |_this will start being executed on the next frame (1)
@@ -74,7 +78,9 @@ frame 0
 
 
 output:
+
 frame 1 - another print in same frame '1'
+
 frame 2
 frame 3
 ```
