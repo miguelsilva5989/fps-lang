@@ -1,4 +1,8 @@
-use std::fmt::{self, Debug, Display, Formatter};
+use lazy_static::lazy_static;
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Display, Formatter},
+};
 
 use anyhow::Result;
 use thiserror::Error;
@@ -10,8 +14,14 @@ enum FpsError {
     #[error("Unterminated consumption until char '{0:?}' at line {2}. Consumed: {1}")]
     UnterminatedConsumption(Vec<char>, String, usize),
 }
+lazy_static! {
+    static ref KEYWORDS: HashMap<&'static str, TokenType> = {
+        use TokenType::*;
+        HashMap::from([("for", For), ("print", Print), ("println", Println)])
+    };
+}
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum TokenType {
     // single char
     Fps, // #
@@ -307,17 +317,11 @@ impl<'a> FpsInput<'a> {
                         let mut id: std::string::String = ch.into();
                         id.push_str(self.consume_identifier().as_str());
 
-                        self.create_token(Identifer, id.clone(), Some(LiteralValue::Identifier(id)))
-
-                        // // if RESERVED.contains(&id.as_str()) {
-                        // //     match id.as_str() {
-                        // //         "None" => tokens.push(Token::new(id, TokenType::None)),
-                        // //         _ => panic!("need to implement reserverd '{}' keywork in tokenizer", id),
-                        // //     }
-                        // // } else {
-                        // //     tokens.push(Token::new(id, TokenType::Identifier));
-                        // // }
-                        // todo!()
+                        if let Some(tt) = KEYWORDS.get(id.as_str()) {
+                            self.create_token(*tt, id.clone(), Some(LiteralValue::Identifier(id)))
+                        } else {
+                            self.create_token(Identifer, id.clone(), Some(LiteralValue::Identifier(id)))
+                        }
                     } else {
                         self.current += 1;
                         return Err(FpsError::UnrecognizedChar(ch, self.line).into());

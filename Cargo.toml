@@ -8,5 +8,6 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.78"
 clap = { version = "4.4.12", features = ["derive"] }
+lazy_static = "1.4.0"
 thiserror = "1.0.53"
 
