@@ -40,6 +40,7 @@ pub enum TokenType {
     Println,
 
     // Ignore
+    Comment,
     Whitespace,
     Eof,
 }
@@ -160,6 +161,29 @@ impl<'a> FpsInput<'a> {
         ch
     }
 
+    fn read_until_eol(&mut self) -> String {
+        let mut rem = "".to_string();
+        loop {
+            match self.peek_next() {
+                Ok(is_next) => {
+                    if let Some(next) = is_next {
+                        if next == '\n' || next == '\r' {
+                            break;
+                        } else {
+                            rem.push_str(next.to_string().as_str());
+                            self.current += 1;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                //Eof
+                Err(_) => break,
+            }
+        }
+        rem
+    }
+
     fn is_next_char_match(&mut self, ch: char) -> bool {
         match self.peek_next() {
             Ok(is_next) => {
@@ -174,7 +198,7 @@ impl<'a> FpsInput<'a> {
                 }
             }
             //Eof
-            Err(_) => false
+            Err(_) => false,
         }
     }
 
@@ -189,7 +213,15 @@ impl<'a> FpsInput<'a> {
                 '+' => token!(Plus, ch, self.line, self.current),
                 '-' => token!(Minus, ch, self.line, self.current),
                 '*' => token!(Star, ch, self.line, self.current),
-                '/' => token!(Slash, ch, self.line, self.current),
+                '/' => {
+                    // comments are read until Eol
+                    if self.is_next_char_match('/') {
+                        let comment = self.read_until_eol();
+                        token!(Comment, comment, self.line, self.current)
+                    } else {
+                        token!(Slash, ch, self.line, self.current)
+                    }
+                }
                 // literals
                 '#' => token!(Fps, ch, self.line, self.current),
                 ';' => token!(Semicolon, ch, self.line, self.current),
@@ -205,7 +237,7 @@ impl<'a> FpsInput<'a> {
                     } else {
                         token!(Colon, ch, self.line, self.current)
                     }
-                },
+                }
 
                 // '+' | '-' | '*' | '/' | '%' => tokens.push(Token::new(ch.into(), TokenType::BinaryOperator)),
                 _ => {
