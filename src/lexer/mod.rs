@@ -12,7 +12,7 @@ enum FpsError {
 #[derive(Debug)]
 pub enum TokenType {
     // single char
-    Fps,
+    Fps, // #
     Semicolon,
     Colon,
     Equals,
@@ -24,6 +24,10 @@ pub enum TokenType {
     Minus,
     Star,
     Slash,
+    // Bang, // !
+
+    // symbols
+    Assign, // :=
 
     // literals
     Identifer,
@@ -145,33 +149,65 @@ impl<'a> FpsInput<'a> {
         Ok(())
     }
 
-    fn advance(&mut self) -> Result<Option<char>> {
+    fn peek_next(&mut self) -> Result<Option<char>> {
         let ch = self.input.chars().nth(self.current);
-        self.current += 1;
         Ok(ch)
+    }
+
+    fn advance(&mut self) -> Result<Option<char>> {
+        let ch = self.peek_next();
+        self.current += 1;
+        ch
+    }
+
+    fn is_next_char_match(&mut self, ch: char) -> bool {
+        match self.peek_next() {
+            Ok(is_next) => {
+                if let Some(next) = is_next {
+                    if next == ch {
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+            //Eof
+            Err(_) => false
+        }
     }
 
     fn tokenzine(&mut self) -> Result<Option<Token>> {
         if let Ok(Some(ch)) = self.advance() {
             let token = match ch {
-                '#' => token!(Fps, ch, self.line, self.current),
-                ';' => token!(Semicolon, ch, self.line, self.current),
-                ':' => token!(Colon, ch, self.line, self.current),
-                '=' => token!(Equals, ch, self.line, self.current),
-                '(' => token!(OpenParen, ch, self.line, self.current),
-                ')' => token!(CloseParen, ch, self.line, self.current),
-                '{' => token!(OpenBrace, ch, self.line, self.current),
-                '}' => token!(CloseBrace, ch, self.line, self.current),
+                // whitespaces
+                ' ' => token!(Whitespace, ch, self.line, self.current),
+                '\n' => token!(Whitespace, ch, self.line, self.current),
+                '\r' => token!(Whitespace, ch, self.line, self.current),
                 // operations
                 '+' => token!(Plus, ch, self.line, self.current),
                 '-' => token!(Minus, ch, self.line, self.current),
                 '*' => token!(Star, ch, self.line, self.current),
                 '/' => token!(Slash, ch, self.line, self.current),
+                // literals
+                '#' => token!(Fps, ch, self.line, self.current),
+                ';' => token!(Semicolon, ch, self.line, self.current),
+                '=' => token!(Equals, ch, self.line, self.current),
+                '(' => token!(OpenParen, ch, self.line, self.current),
+                ')' => token!(CloseParen, ch, self.line, self.current),
+                '{' => token!(OpenBrace, ch, self.line, self.current),
+                '}' => token!(CloseBrace, ch, self.line, self.current),
+                ':' => {
+                    if self.is_next_char_match('=') {
+                        self.advance()?;
+                        token!(Assign, ":=", self.line, self.current)
+                    } else {
+                        token!(Colon, ch, self.line, self.current)
+                    }
+                },
 
                 // '+' | '-' | '*' | '/' | '%' => tokens.push(Token::new(ch.into(), TokenType::BinaryOperator)),
-                ' ' => token!(Whitespace, ch, self.line, self.current),
-                '\n' => token!(Whitespace, ch, self.line, self.current),
-                '\r' => token!(Whitespace, ch, self.line, self.current),
                 _ => {
                     self.current += 1;
                     return Err(FpsError::UnrecognizedChar(ch, self.line).into());
