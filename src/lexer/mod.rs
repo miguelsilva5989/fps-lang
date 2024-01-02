@@ -86,23 +86,18 @@ impl Token {
     }
 }
 
-macro_rules! token {
-    // single char
-    ($token_type: ident, $lexeme: expr, $line: expr, $pos: expr) => {
-        Token::new(TokenType::$token_type, $lexeme.into(), None, $line, $pos)
-    };
-    // literal
-    ($token_type: ident, $lexeme: expr, $literal: expr, $line: expr, $pos: expr) => {
-        Token::new(TokenType::$token_type, $lexeme.into(), $literal, $line, $pos)
-    };
-}
-
 pub struct FpsInput<'a> {
     input: &'a str,
     pub tokens: Vec<Token>,
     start: usize,
     current: usize,
     line: usize,
+}
+
+macro_rules! token {
+    ($token_type: expr, $lexeme: expr, $literal: expr, $line: expr, $pos: expr) => {
+        Token::new($token_type, $lexeme, $literal, $line, $pos)
+    };
 }
 
 impl<'a> FpsInput<'a> {
@@ -120,6 +115,10 @@ impl<'a> FpsInput<'a> {
         self.current >= self.input.len()
     }
 
+    fn create_token(&self, token_type: TokenType, lexeme: String, literal: Option<LiteralValue>) -> Token {
+        token!(token_type, lexeme, literal, self.line, self.current)
+    }
+
     pub fn scan_tokens(&mut self) -> Result<()> {
         while !self.is_at_end() {
             self.line += 1;
@@ -135,7 +134,7 @@ impl<'a> FpsInput<'a> {
             }
         }
 
-        self.tokens.push(token!(Eof, "", None, 0, self.input.len()));
+        self.tokens.push(self.create_token(TokenType::Eof, "".to_owned(), None));
 
         Ok(())
     }
@@ -157,6 +156,7 @@ impl<'a> FpsInput<'a> {
             match self.peek() {
                 Ok(is_next) => {
                     if let Some(next) = is_next {
+                        println!("nextt  {next}");
                         if chars.contains(&next) {
                             break;
                         } else {
@@ -164,7 +164,7 @@ impl<'a> FpsInput<'a> {
                             self.current += 1;
                         }
                     } else {
-                        break;
+                        return Err(FpsError::UnterminatedConsumption(chars, consumed, self.line).into());
                     }
                 }
                 //Eof
@@ -204,48 +204,49 @@ impl<'a> FpsInput<'a> {
 
     fn tokenzine(&mut self) -> Result<Option<Token>> {
         if let Ok(Some(ch)) = self.eat() {
+            use TokenType::*;
             let token = match ch {
                 // whitespaces
-                ' ' | '\t' => token!(Whitespace, ch, self.line, self.current),
+                ' ' | '\t' => self.create_token(Whitespace, ch.into(), None),
                 '\n' | '\r' => {
                     self.line += 1;
-                    token!(Whitespace, ch, self.line, self.current)
+                    self.create_token(Whitespace, ch.into(), None)
                 }
                 // operations
-                '+' => token!(Plus, ch, self.line, self.current),
-                '-' => token!(Minus, ch, self.line, self.current),
-                '*' => token!(Star, ch, self.line, self.current),
+                '+' => self.create_token(Plus, ch.into(), None),
+                '-' => self.create_token(Minus, ch.into(), None),
+                '*' => self.create_token(Star, ch.into(), None),
                 '/' => {
                     // comments are read until Eol
                     if self.is_next_char_match('/') {
                         self.current += 1;
                         let comment = self.read_until_eol()?;
-                        token!(Comment, comment, self.line, self.current)
+                        self.create_token(Comment, comment.into(), None)
                     } else {
-                        token!(Slash, ch, self.line, self.current)
+                        self.create_token(Slash, ch.into(), None)
                     }
                 }
                 // literals
-                '#' => token!(Fps, ch, self.line, self.current),
-                ';' => token!(Semicolon, ch, self.line, self.current),
-                '=' => token!(Equals, ch, self.line, self.current),
-                '(' => token!(OpenParen, ch, self.line, self.current),
-                ')' => token!(CloseParen, ch, self.line, self.current),
-                '{' => token!(OpenBrace, ch, self.line, self.current),
-                '}' => token!(CloseBrace, ch, self.line, self.current),
+                '#' => self.create_token(Fps, ch.into(), None),
+                ';' => self.create_token(Semicolon, ch.into(), None),
+                '=' => self.create_token(Equals, ch.into(), None),
+                '(' => self.create_token(OpenParen, ch.into(), None),
+                ')' => self.create_token(CloseParen, ch.into(), None),
+                '{' => self.create_token(OpenBrace, ch.into(), None),
+                '}' => self.create_token(CloseBrace, ch.into(), None),
                 ':' => {
                     if self.is_next_char_match('=') {
                         self.current += 1;
-                        token!(Assign, ":=", self.line, self.current)
+                        self.create_token(Assign, ":=".to_owned(), None)
                     } else {
-                        token!(Colon, ch, self.line, self.current)
+                        self.create_token(Colon, ch.into(), None)
                     }
                 }
                 // string literal
                 '"' => {
                     let string_literal = self.consume_string()?;
-                    token!(String, ch, Some(LiteralValue::String(string_literal)), self.line, self.current)
-                },
+                    self.create_token(String, string_literal.clone(), Some(LiteralValue::String(string_literal)))
+                }
 
                 _ => {
                     self.current += 1;
@@ -334,7 +335,7 @@ mod tests {
     #[test]
     fn comment() {
         use TokenType::*;
-        let input = "//I am a comment";
+        let input = "//I am a comment\n";
         let expected = vec![Comment, Eof];
 
         let mut scanner = FpsInput::new(input);
@@ -357,13 +358,24 @@ mod tests {
         let mut scanner = FpsInput::new(input);
         let _ = scanner.scan_tokens();
 
-        println!("{:?}", scanner.tokens);
-
         assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
-        assert_eq!(scanner.tokens[0].literal, Some(LiteralValue::String("I am a string literal".to_owned())));
+        assert_eq!(
+            scanner.tokens[0].literal,
+            Some(LiteralValue::String("I am a string literal".to_owned()))
+        );
         assert_eq!(
             scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
             expected
         );
+    }
+
+    #[test]
+    fn unterminated_consumption() {
+        let input = "\"I do not end...";
+        
+        let mut scanner = FpsInput::new(input);
+        let result = scanner.scan_tokens();
+
+        assert_eq!(format!("{}", result.unwrap_err().root_cause()), "Unterminated consumption until char '['\"']' at line 1. Consumed: I do not end...");
     }
 }
