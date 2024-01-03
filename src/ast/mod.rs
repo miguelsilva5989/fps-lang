@@ -1,6 +1,6 @@
 use crate::lexer::{self, Token, TokenType};
 use std::fmt::{self, Display, Formatter};
-use std::ops::{Add, Div, Mul, Rem, Sub};
+use std::ops::{Add, Div, Mul, Sub};
 
 use anyhow::Result;
 use thiserror::Error;
@@ -19,13 +19,13 @@ enum AstError {
     Unreachable(String),
     #[error("Invalid operator: {0:?}")]
     InvalidOperator(TokenType),
-    #[error("Invalid operation between '{0:?}' and '{1:?}'")]
-    InvalidOperation(LiteralValue, LiteralValue),
+    #[error("Invalid operation: {0:?} {1} {2:?}")]
+    InvalidOperation(LiteralValue, String, LiteralValue),
     #[error("Cannot divide by 0: {0}/{1}")]
     Division0(LiteralValue, LiteralValue),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum LiteralValue {
     Number(i64),
     StringValue(String),
@@ -189,9 +189,13 @@ impl Expr {
                 if right == LiteralValue::Number(0) {
                     return Err(AstError::Division0(left, right).into());
                 }
-
+                
                 Ok(left / right)
             }
+            TokenType::Greater => Ok(self::LiteralValue::Boolean(left > right)),
+            TokenType::GreaterEqual => Ok(self::LiteralValue::Boolean(left >= right)),
+            TokenType::Less => Ok(self::LiteralValue::Boolean(left < right)),
+            TokenType::LessEqual => Ok(self::LiteralValue::Boolean(left <= right)),
 
             _ => Err(AstError::InvalidOperator(operator.token_type).into()),
         }
@@ -220,7 +224,7 @@ impl Expr {
                 if matches!(lhs, LiteralValue::Number(_)) && matches!(rhs, LiteralValue::Number(_)) {
                     return self.evaluate_numeric_arithmetic_expression(lhs.into(), rhs.into(), operator);
                 } else {
-                    return Err(AstError::InvalidOperation(lhs, rhs).into());
+                    return Err(AstError::InvalidOperation(lhs, operator.lexeme.clone(), rhs).into());
                 }
             }
         }
