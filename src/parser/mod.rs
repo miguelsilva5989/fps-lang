@@ -4,7 +4,16 @@ use crate::{
 };
 
 use anyhow::Result;
+use thiserror::Error;
 
+#[derive(Error, Debug)]
+#[allow(dead_code)]
+enum ParserError {
+    #[error("Could not consume: {}", {0})]
+    Consume(String),
+}
+
+#[derive(Debug)]
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
@@ -15,7 +24,7 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
-    fn expression(&mut self) -> Result<Expr> {
+    pub fn expression(&mut self) -> Result<Expr> {
         self.equality()
     }
 
@@ -77,8 +86,12 @@ impl Parser {
         self.peek().token_type == TokenType::Eof
     }
 
-    fn consume(&mut self, token_type: TokenType, msg: &str) {
-        todo!()
+    fn consume(&mut self, token_type: TokenType, msg: &str) -> Result<()> {
+        let token = self.peek();
+        if token.token_type == token_type {
+            self.advance();
+        }
+        return Err(ParserError::Consume(msg.to_string()).into());
     }
 
     fn primary(&mut self) -> Result<Expr> {
@@ -86,12 +99,14 @@ impl Parser {
 
         if self.match_token(OpenParen) {
             let expr = self.expression()?;
-            self.consume(CloseParen, "Expected ')'");
+            self.consume(CloseParen, "Expected ')'")?;
             Ok(Expr::Grouping { expr: Box::new(expr) })
         } else {
             let token = self.peek();
             self.advance();
-            Ok(Expr::Literal { value: LiteralValue::from_token(token)? })
+            Ok(Expr::Literal {
+                value: LiteralValue::from_token(token)?,
+            })
         }
     }
 
@@ -100,7 +115,10 @@ impl Parser {
         if self.match_tokens(vec![Bang, Minus]) {
             let operator = self.previous();
             let rhs = self.unary()?;
-            Ok(Expr::Unary { operator, right: Box::new(rhs) })
+            Ok(Expr::Unary {
+                operator,
+                right: Box::new(rhs),
+            })
         } else {
             self.primary()
         }
@@ -152,5 +170,45 @@ impl Parser {
             };
         }
         Ok(expr)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lexer::{LiteralValue::*, Token, TokenType::*, FpsInput};
+
+    macro_rules! token {
+        ($token_type: expr, $lexeme: expr, $literal: expr) => {
+            Token::new($token_type, $lexeme.into(), $literal, 0, 0)
+        };
+    }
+
+    #[test]
+    fn test_addition() {
+        //4+20;
+        let input = vec![
+            token!(Number, "4", Some(Int(4))),
+            token!(Plus, "+", None),
+            token!(Number, "20", Some(Int(20))),
+            token!(Semicolon, ";", None),
+        ];
+
+        let mut parser = Parser::new(input);
+        let expression = parser.expression();
+
+        assert_eq!(expression.unwrap().to_string(), "(+ 4 20)")
+    }
+
+    #[test]
+    fn test_comparison() {
+        let input = "4 + 20 == 5 + 6";
+        let mut scanner = FpsInput::new(input);
+        scanner.scan_tokens().expect("error scanning tokens");
+
+        let mut parser = Parser::new(scanner.tokens);
+        let expression = parser.expression();
+
+        assert_eq!(expression.unwrap().to_string(), "(== (+ 4 20) (+ 5 6))")
     }
 }

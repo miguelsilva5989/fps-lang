@@ -5,6 +5,7 @@ use anyhow::Result;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 enum AstError {
     #[error("Could not unwrap Lexer Literal Value as a String: {}", {0})]
     UnwrapString(Option<lexer::LiteralValue>),
@@ -14,6 +15,8 @@ enum AstError {
     LiteralValueCreate(Token),
 }
 
+#[derive(Debug)]
+#[allow(dead_code)]
 pub enum LiteralValue {
     Number(i64),
     StringValue(String),
@@ -58,6 +61,7 @@ impl LiteralValue {
     }
 }
 
+#[derive(Debug)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,
