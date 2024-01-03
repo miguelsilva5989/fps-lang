@@ -26,7 +26,6 @@ pub enum TokenType {
     // single char
     Fps, // #
     Semicolon,
-    Equals,
     Colon,
     OpenParen,
     CloseParen,
@@ -36,7 +35,16 @@ pub enum TokenType {
     Minus,
     Star,
     Slash,
-    // Bang, // !
+    
+    // 1/2 chars long
+    Equal,
+    EqualEqual,
+    Bang, // !
+    BangEqual, // !=
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
 
     // symbols
     Assign, // :=
@@ -58,7 +66,7 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum LiteralValue {
     Int(i64),
     // Float(f64),
@@ -67,9 +75,9 @@ pub enum LiteralValue {
     Keyword(String),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token {
-    token_type: TokenType,
+    pub token_type: TokenType,
     pub lexeme: String,
     literal: Option<LiteralValue>,
     line: usize,
@@ -289,11 +297,42 @@ impl<'a> FpsInput<'a> {
                 // single char
                 '#' => self.create_token(Fps, ch.into(), None),
                 ';' => self.create_token(Semicolon, ch.into(), None),
-                '=' => self.create_token(Equals, ch.into(), None),
                 '(' => self.create_token(OpenParen, ch.into(), None),
                 ')' => self.create_token(CloseParen, ch.into(), None),
                 '{' => self.create_token(OpenBrace, ch.into(), None),
                 '}' => self.create_token(CloseBrace, ch.into(), None),
+                '=' => {
+                    if self.is_next_char_match('=') {
+                        self.current += 1;
+                        self.create_token(EqualEqual, "==".to_owned(), None)
+                    } else {
+                        self.create_token(Equal, ch.into(), None)
+                    }
+                }
+                '!' => {
+                    if self.is_next_char_match('=') {
+                        self.current += 1;
+                        self.create_token(BangEqual, "!=".to_owned(), None)
+                    } else {
+                        self.create_token(Bang, ch.into(), None)
+                    }
+                }
+                '>' => {
+                    if self.is_next_char_match('=') {
+                        self.current += 1;
+                        self.create_token(GreaterEqual, ">=".to_owned(), None)
+                    } else {
+                        self.create_token(Greater, ch.into(), None)
+                    }
+                }
+                '<' => {
+                    if self.is_next_char_match('=') {
+                        self.current += 1;
+                        self.create_token(LessEqual, "<=".to_owned(), None)
+                    } else {
+                        self.create_token(Less, ch.into(), None)
+                    }
+                }
                 ':' => {
                     if self.is_next_char_match('=') {
                         self.current += 1;
@@ -343,15 +382,15 @@ mod tests {
 
     #[test]
     fn single_char_tokens() {
-        let input = "# ; = : ( ) { } + - * /";
+        let input = "# ; = : ( ) { } + - * / ! > <";
         let expected = vec![
-            Fps, Semicolon, Equals, Colon, OpenParen, CloseParen, OpenBrace, CloseBrace, Plus, Minus, Star, Slash, Eof,
+            Fps, Semicolon, Equal, Colon, OpenParen, CloseParen, OpenBrace, CloseBrace, Plus, Minus, Star, Slash, Bang, Greater, Less, Eof,
         ];
 
         let mut scanner = FpsInput::new(input);
         let _ = scanner.scan_tokens();
 
-        assert_eq!(scanner.tokens.len(), 13); //Eof counts as a Token
+        assert_eq!(scanner.tokens.len(), 16); //Eof counts as a Token
         assert_eq!(
             scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
             expected
@@ -360,13 +399,13 @@ mod tests {
 
     #[test]
     fn two_char_tokens() {
-        let input = ":=";
-        let expected = vec![Assign, Eof];
+        let input = ":= == != >= <=";
+        let expected = vec![Assign, EqualEqual, BangEqual, GreaterEqual, LessEqual, Eof];
 
         let mut scanner = FpsInput::new(input);
         let _ = scanner.scan_tokens();
 
-        assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
+        assert_eq!(scanner.tokens.len(), 6); //Eof counts as a Token
         assert_eq!(
             scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
             expected

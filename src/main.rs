@@ -6,6 +6,7 @@ use crate::lexer::FpsInput;
 
 mod lexer;
 mod ast;
+mod parser;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
