@@ -196,6 +196,17 @@ impl Expr {
             TokenType::GreaterEqual => Ok(self::LiteralValue::Boolean(left >= right)),
             TokenType::Less => Ok(self::LiteralValue::Boolean(left < right)),
             TokenType::LessEqual => Ok(self::LiteralValue::Boolean(left <= right)),
+            TokenType::BangEqual => Ok(self::LiteralValue::Boolean(left != right)),
+            TokenType::EqualEqual => Ok(self::LiteralValue::Boolean(left == right)),
+
+            _ => Err(AstError::InvalidOperator(operator.token_type).into()),
+        }
+    }
+
+    fn evaluate_string_expression(&self, left: LiteralValue, right: LiteralValue, operator: &Token) -> Result<LiteralValue> {
+        match operator.token_type {
+            TokenType::BangEqual => Ok(self::LiteralValue::Boolean(left != right)),
+            TokenType::EqualEqual => Ok(self::LiteralValue::Boolean(left == right)),
 
             _ => Err(AstError::InvalidOperator(operator.token_type).into()),
         }
@@ -222,8 +233,11 @@ impl Expr {
                 let rhs = right.evaluate()?;
 
                 if matches!(lhs, LiteralValue::Number(_)) && matches!(rhs, LiteralValue::Number(_)) {
-                    return self.evaluate_numeric_arithmetic_expression(lhs.into(), rhs.into(), operator);
-                } else {
+                    return self.evaluate_numeric_arithmetic_expression(lhs, rhs, operator);
+                } else if matches!(lhs, LiteralValue::StringValue(_)) && matches!(rhs, LiteralValue::StringValue(_)) { 
+                    return self.evaluate_string_expression(lhs, rhs, operator);
+                } 
+                else {
                     return Err(AstError::InvalidOperation(lhs, operator.lexeme.clone(), rhs).into());
                 }
             }
