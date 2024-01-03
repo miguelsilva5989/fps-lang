@@ -35,7 +35,9 @@ impl Parser {
 
                 println!("{:?}", self.is_at_end());
                 println!("{:?}", self.peek());
-                panic!("to fix remaining input. ex:   ( 1 )  + 2    only translates to  (group 1)")
+
+                panic!("to fix remaining input. ex:   ( 1 )  + 2    only translates to  (group 1)");
+                todo!();
             }
         }
 
@@ -233,9 +235,9 @@ mod tests {
     fn test_addition() {
         //4+20;
         let input = vec![
-            token!(Number, "4", Some(Int(4))),
+            token!(Number, "4", Some(Float(4.))),
             token!(Plus, "+", None),
-            token!(Number, "20", Some(Int(20))),
+            token!(Number, "20", Some(Float(20.))),
             token!(Semicolon, ";", None),
         ];
 

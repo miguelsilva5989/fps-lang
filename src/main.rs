@@ -29,7 +29,10 @@ fn execute(input: &str) -> Result<()> {
     println!("expr: {}", expression);
     
     let result = expression.evaluate();
-    println!("res : {:?}", result);
+    match result {
+        Ok(res) => println!("{}", res),
+        Err(res) => println!("ERROR: {:?}", res),
+    }
 
     // for token in scanner.tokens {
     //     println!("Token {}", token);

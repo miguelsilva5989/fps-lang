@@ -70,7 +70,7 @@ pub enum TokenType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LiteralValue {
-    Int(i64),
+    Float(f64),
     // Float(f64),
     StringValue(String),
     Identifier(String),
@@ -354,7 +354,7 @@ impl<'a> FpsInput<'a> {
                         let mut num: String = ch.into();
                         num.push_str(self.consume_number().as_str());
 
-                        self.create_token(Number, num.clone(), Some(LiteralValue::Int(num.parse::<i64>().unwrap())))
+                        self.create_token(Number, num.clone(), Some(LiteralValue::Float(num.parse::<f64>().unwrap())))
                     } else if ch.is_alphabetic() {
                         let mut id: String = ch.into();
                         id.push_str(self.consume_identifier().as_str());
@@ -458,7 +458,7 @@ mod tests {
         let _ = scanner.scan_tokens();
 
         assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
-        assert_eq!(scanner.tokens[0].literal, Some(LiteralValue::Int(123)));
+        assert_eq!(scanner.tokens[0].literal, Some(LiteralValue::Float(123.)));
         assert_eq!(
             scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
             expected

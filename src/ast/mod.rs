@@ -9,7 +9,7 @@ use thiserror::Error;
 enum AstError {
     #[error("Could not unwrap Lexer Literal Value as a String: {0:?}")]
     UnwrapString(Option<lexer::LiteralValue>),
-    #[error("Could not unwrap Lexer Literal Value as an i64: {0:?}")]
+    #[error("Could not unwrap Lexer Literal Value as an f64: {0:?}")]
     UnwrapInt(Option<lexer::LiteralValue>),
     #[error("Could not create literal value from token: {0:?}")]
     LiteralValueCreate(Token),
@@ -27,7 +27,7 @@ enum AstError {
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum LiteralValue {
-    Number(i64),
+    Number(f64),
     StringValue(String),
     Boolean(bool),
 }
@@ -45,8 +45,8 @@ impl Display for LiteralValue {
     }
 }
 
-impl Into<i64> for LiteralValue {
-    fn into(self) -> i64 {
+impl Into<f64> for LiteralValue {
+    fn into(self) -> f64 {
         match self {
             LiteralValue::Number(x) => x,
             LiteralValue::Boolean(_) => panic!("Bool cannot be cast into f64"),
@@ -60,7 +60,7 @@ impl Add for LiteralValue {
 
     fn add(self, other: Self) -> Self {
         match self {
-            LiteralValue::Number(x) => LiteralValue::Number(x + <LiteralValue as Into<i64>>::into(other)),
+            LiteralValue::Number(x) => LiteralValue::Number(x + <LiteralValue as Into<f64>>::into(other)),
             LiteralValue::Boolean(val) => panic!("Cannot Add bool '{val}' with number"),
             _ => todo!(),
         }
@@ -71,7 +71,7 @@ impl Sub for LiteralValue {
 
     fn sub(self, other: Self) -> Self {
         match self {
-            LiteralValue::Number(x) => LiteralValue::Number(x - <LiteralValue as Into<i64>>::into(other)),
+            LiteralValue::Number(x) => LiteralValue::Number(x - <LiteralValue as Into<f64>>::into(other)),
             LiteralValue::Boolean(val) => panic!("Cannot Subtract bool '{val}' with number"),
             _ => todo!(),
         }
@@ -82,7 +82,7 @@ impl Mul for LiteralValue {
 
     fn mul(self, other: Self) -> Self {
         match self {
-            LiteralValue::Number(x) => LiteralValue::Number(x * <LiteralValue as Into<i64>>::into(other)),
+            LiteralValue::Number(x) => LiteralValue::Number(x * <LiteralValue as Into<f64>>::into(other)),
             LiteralValue::Boolean(val) => panic!("Cannot Multiply bool '{val}' with number"),
             _ => todo!(),
         }
@@ -93,7 +93,7 @@ impl Div for LiteralValue {
 
     fn div(self, other: Self) -> Self {
         match self {
-            LiteralValue::Number(x) => LiteralValue::Number(x / <LiteralValue as Into<i64>>::into(other)),
+            LiteralValue::Number(x) => LiteralValue::Number(x / <LiteralValue as Into<f64>>::into(other)),
             LiteralValue::Boolean(val) => panic!("Cannot Divide bool '{val}' with number"),
             _ => todo!(),
         }
@@ -105,7 +105,7 @@ impl LiteralValue {
         use TokenType::*;
         match token.token_type {
             StringLiteral => Ok(Self::StringValue(unwrap_as_string(token.literal)?)),
-            Number => Ok(Self::Number(unwrap_as_i64(token.literal)?)),
+            Number => Ok(Self::Number(unwrap_as_f64(token.literal)?)),
             True => Ok(Self::Boolean(true)),
             False => Ok(Self::Boolean(false)),
             _ => return Err(AstError::LiteralValueCreate(token).into()),
@@ -116,7 +116,7 @@ impl LiteralValue {
         use LiteralValue::*;
         match self {
             Number(num) => {
-                if *num == 0 {
+                if *num == 0. {
                     LiteralValue::Boolean(false)
                 } else {
                     LiteralValue::Boolean(true)
@@ -142,9 +142,9 @@ fn unwrap_as_string(literal: Option<lexer::LiteralValue>) -> Result<String> {
     }
 }
 
-fn unwrap_as_i64(literal: Option<lexer::LiteralValue>) -> Result<i64> {
+fn unwrap_as_f64(literal: Option<lexer::LiteralValue>) -> Result<f64> {
     match literal {
-        Some(lexer::LiteralValue::Int(s)) => Ok(s),
+        Some(lexer::LiteralValue::Float(s)) => Ok(s),
         _ => return Err(AstError::UnwrapInt(literal).into()),
     }
 }
@@ -186,10 +186,10 @@ impl Expr {
             TokenType::Minus => Ok(left - right),
             TokenType::Star => Ok(left * right),
             TokenType::Slash => {
-                if right == LiteralValue::Number(0) {
+                if right == LiteralValue::Number(0.) {
                     return Err(AstError::Division0(left, right).into());
                 }
-                
+
                 Ok(left / right)
             }
             TokenType::Greater => Ok(self::LiteralValue::Boolean(left > right)),
@@ -204,6 +204,19 @@ impl Expr {
     }
 
     fn evaluate_string_expression(&self, left: LiteralValue, right: LiteralValue, operator: &Token) -> Result<LiteralValue> {
+        match operator.token_type {
+            TokenType::Greater => Ok(self::LiteralValue::Boolean(left > right)),
+            TokenType::GreaterEqual => Ok(self::LiteralValue::Boolean(left >= right)),
+            TokenType::Less => Ok(self::LiteralValue::Boolean(left < right)),
+            TokenType::LessEqual => Ok(self::LiteralValue::Boolean(left <= right)),
+            TokenType::BangEqual => Ok(self::LiteralValue::Boolean(left != right)),
+            TokenType::EqualEqual => Ok(self::LiteralValue::Boolean(left == right)),
+
+            _ => Err(AstError::InvalidOperator(operator.token_type).into()),
+        }
+    }
+
+    fn evaluate_bool_expression(&self, left: LiteralValue, right: LiteralValue, operator: &Token) -> Result<LiteralValue> {
         match operator.token_type {
             TokenType::BangEqual => Ok(self::LiteralValue::Boolean(left != right)),
             TokenType::EqualEqual => Ok(self::LiteralValue::Boolean(left == right)),
@@ -234,10 +247,11 @@ impl Expr {
 
                 if matches!(lhs, LiteralValue::Number(_)) && matches!(rhs, LiteralValue::Number(_)) {
                     return self.evaluate_numeric_arithmetic_expression(lhs, rhs, operator);
-                } else if matches!(lhs, LiteralValue::StringValue(_)) && matches!(rhs, LiteralValue::StringValue(_)) { 
+                } else if matches!(lhs, LiteralValue::StringValue(_)) && matches!(rhs, LiteralValue::StringValue(_)) {
                     return self.evaluate_string_expression(lhs, rhs, operator);
-                } 
-                else {
+                } else if matches!(lhs, LiteralValue::Boolean(_)) && matches!(rhs, LiteralValue::Boolean(_)) {
+                    return self.evaluate_bool_expression(lhs, rhs, operator);
+                } else {
                     return Err(AstError::InvalidOperation(lhs, operator.lexeme.clone(), rhs).into());
                 }
             }
@@ -257,12 +271,12 @@ mod tests {
 
         let minus_token = Token::new(TokenType::Minus, "-".to_string(), None, 0, 0);
         let num = Literal {
-            value: LiteralValue::Number(123),
+            value: LiteralValue::Number(123.),
         };
 
         let group = Grouping {
             expr: Box::new(Literal {
-                value: LiteralValue::Number(45),
+                value: LiteralValue::Number(45.),
             }),
         };
         let multi = Token::new(TokenType::Star, "*".to_string(), None, 0, 0);
