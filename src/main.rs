@@ -1,5 +1,6 @@
 use anyhow::Result;
-use clap::Parser;
+use clap::Parser as ClapParser;
+use parser::Parser;
 use std::io::{stdin, stdout, Write};
 
 use crate::lexer::FpsInput;
@@ -8,7 +9,7 @@ mod lexer;
 mod ast;
 mod parser;
 
-#[derive(Parser, Debug)]
+#[derive(ClapParser, Debug)]
 #[command(author, version, about)]
 struct Cli {
     /// To access the REPL
@@ -20,9 +21,14 @@ fn execute(input: &str) -> Result<()> {
     let mut scanner = FpsInput::new(input);
     scanner.scan_tokens()?;
 
-    for token in scanner.tokens {
-        println!("Token {}", token);
-    }
+    let mut parser = Parser::new(scanner.tokens);
+    let expression = parser.expression()?;
+
+    println!("{}", expression);
+
+    // for token in scanner.tokens {
+    //     println!("Token {}", token);
+    // }
 
     Ok(())
 }

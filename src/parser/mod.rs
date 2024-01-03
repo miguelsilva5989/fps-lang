@@ -86,6 +86,25 @@ impl Parser {
         self.peek().token_type == TokenType::Eof
     }
 
+    /// try to recover from parsing errors
+    fn synchronize(&mut self) {
+        use TokenType::*;
+        self.advance();
+
+        while !self.is_at_end() {
+            if self.previous().token_type == Semicolon {
+                return;
+            }
+
+            match self.peek().token_type {
+                For | Print | Println => return,
+                _ => ()
+            }
+
+            self.advance();
+        }
+    }
+
     fn consume(&mut self, token_type: TokenType, msg: &str) -> Result<()> {
         let token = self.peek();
         if token.token_type == token_type {
