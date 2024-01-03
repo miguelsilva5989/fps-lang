@@ -31,7 +31,7 @@ We need to wait as time progresses to interact with actions that are requested a
 
 | Syntax                    | Description           | Example                      |
 | ------------------------- | --------------------- | ---------------------------- |
-| var:=\<val>;              | variable desclaration | # a := 0; #                  |
+| id:=\<val>;               | variable desclaration | # a := 0; #                  |
 | 2#                        | 2 frames              | 2# print("hello\n"); #       |
 | for 0..2 { <statements> } | for loop              | # for 0..2 { println(it);} # |
 

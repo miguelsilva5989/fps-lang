@@ -43,7 +43,7 @@ pub enum TokenType {
 
     // literals
     Identifer,
-    String,
+    StringLiteral,
     Number,
 
     // keywords
@@ -62,14 +62,15 @@ pub enum TokenType {
 pub enum LiteralValue {
     Int(i64),
     // Float(f64),
-    String(String),
+    StringValue(String),
     Identifier(String),
+    Keyword(String),
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Token {
     token_type: TokenType,
-    lexeme: String,
+    pub lexeme: String,
     literal: Option<LiteralValue>,
     line: usize,
     pos: usize,
@@ -304,21 +305,21 @@ impl<'a> FpsInput<'a> {
                 // literals
                 '"' => {
                     let string_literal = self.consume_string()?;
-                    self.create_token(String, string_literal.clone(), Some(LiteralValue::String(string_literal)))
+                    self.create_token(StringLiteral, string_literal.clone(), Some(LiteralValue::StringValue(string_literal)))
                 }
 
                 _ => {
                     if ch.is_digit(10) {
-                        let mut num: std::string::String = ch.into();
+                        let mut num: String = ch.into();
                         num.push_str(self.consume_number().as_str());
 
                         self.create_token(Number, num.clone(), Some(LiteralValue::Int(num.parse::<i64>().unwrap())))
                     } else if ch.is_alphabetic() {
-                        let mut id: std::string::String = ch.into();
+                        let mut id: String = ch.into();
                         id.push_str(self.consume_identifier().as_str());
 
                         if let Some(tt) = KEYWORDS.get(id.as_str()) {
-                            self.create_token(*tt, id.clone(), Some(LiteralValue::Identifier(id)))
+                            self.create_token(*tt, id.clone(), Some(LiteralValue::Keyword(id)))
                         } else {
                             self.create_token(Identifer, id.clone(), Some(LiteralValue::Identifier(id)))
                         }
@@ -391,7 +392,7 @@ mod tests {
     #[test]
     fn string_literal() {
         let input = "\"I am a string literal\"";
-        let expected = vec![String, Eof];
+        let expected = vec![StringLiteral, Eof];
 
         let mut scanner = FpsInput::new(input);
         let _ = scanner.scan_tokens();
@@ -399,7 +400,7 @@ mod tests {
         assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
         assert_eq!(
             scanner.tokens[0].literal,
-            Some(LiteralValue::String("I am a string literal".to_owned()))
+            Some(LiteralValue::StringValue("I am a string literal".to_owned()))
         );
         assert_eq!(
             scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
@@ -449,6 +450,24 @@ mod tests {
         assert_eq!(
             format!("{}", result.unwrap_err().root_cause()),
             "Unterminated consumption until char '['\"']' at line 1. Consumed: I do not end..."
+        );
+    }
+
+    #[test]
+    fn keywords() {
+        let input = "for forca print println";
+        let expected = vec![For, Identifer, Print, Println, Eof];
+
+        let mut scanner = FpsInput::new(input);
+        let _ = scanner.scan_tokens();
+
+        assert_eq!(scanner.tokens.len(), 5); //Eof counts as a Token
+        assert_eq!(scanner.tokens[0].literal, Some(LiteralValue::Keyword("for".to_owned())));
+        assert_eq!(scanner.tokens[2].literal, Some(LiteralValue::Keyword("print".to_owned())));
+        assert_eq!(scanner.tokens[3].literal, Some(LiteralValue::Keyword("println".to_owned())));
+        assert_eq!(
+            scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
+            expected
         );
     }
 }

@@ -5,6 +5,7 @@ use std::io::{stdin, stdout, Write};
 use crate::lexer::FpsInput;
 
 mod lexer;
+mod ast;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -47,26 +48,27 @@ fn run_prompt() -> Result<()> {
     Ok(())
 }
 
-fn run_file(input: &str) -> Result<()> {
-    todo!("fix line POS");
-    let mut scanner = FpsInput::new(input);
-    for line in input.lines() {
-        scanner.scan_tokens()?;
-    }
+// fn run_file(input: &str) -> Result<()> {
+//     todo!("fix line POS");
+//     let mut scanner = FpsInput::new(input);
+//     for line in input.lines() {
+//         scanner.scan_tokens()?;
+//     }
 
-    for token in scanner.tokens {
-        println!("Token {}", token);
-    }
+//     for token in scanner.tokens {
+//         println!("Token {}", token);
+//     }
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 fn main() -> Result<()> {
     let args = Cli::parse();
 
     if !args.repl {
-        let input = include_str!("sample.fps");
-        run_file(input)?;
+        todo!();
+        // let input = include_str!("sample.fps");
+        // run_file(input)?;
     } else {
         run_prompt()?
     }
