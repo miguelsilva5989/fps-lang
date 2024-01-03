@@ -1,6 +1,6 @@
 use crate::{
     ast::{Expr, LiteralValue},
-    lexer::{Token, TokenType},
+    lexer::{Token, TokenType, KEYWORDS},
 };
 
 use anyhow::Result;
@@ -30,6 +30,7 @@ impl Parser {
 
         if !self.is_at_end() {
             if !self.match_token(TokenType::Semicolon) {
+                println!("{:?}", self);
                 println!("{:?}", expr);
 
                 println!("{:?}", self.is_at_end());
@@ -96,9 +97,9 @@ impl Parser {
                 return;
             }
 
-            match self.peek().token_type {
-                For | Print | Println => return,
-                _ => (),
+            // TokenType keywords
+            if KEYWORDS.get(&*self.peek().lexeme).is_some() {
+                return;
             }
 
             self.advance();
@@ -119,7 +120,7 @@ impl Parser {
 
         let token = self.peek();
         let result = match token.token_type {
-            Number | StringLiteral => Ok(Expr::Literal {
+            Number | StringLiteral | True | False => Ok(Expr::Literal {
                 value: LiteralValue::from_token(token)?,
             }),
             OpenParen => {

@@ -24,9 +24,12 @@ fn execute(input: &str) -> Result<()> {
     println!("{:?}", scanner.tokens);
 
     let mut parser = Parser::new(scanner.tokens);
+    
     let expression = parser.parse()?;
-
-    println!("{}", expression);
+    println!("expr: {}", expression);
+    
+    let result = expression.evaluate()?;
+    println!("res : {}", result);
 
     // for token in scanner.tokens {
     //     println!("Token {}", token);

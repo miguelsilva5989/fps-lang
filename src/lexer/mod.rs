@@ -15,9 +15,9 @@ enum LexerError {
     UnterminatedConsumption(Vec<char>, String, usize),
 }
 lazy_static! {
-    static ref KEYWORDS: HashMap<&'static str, TokenType> = {
+    pub static ref KEYWORDS: HashMap<&'static str, TokenType> = {
         use TokenType::*;
-        HashMap::from([("for", For), ("print", Print), ("println", Println)])
+        HashMap::from([("for", For), ("print", Print), ("println", Println), ("true", True), ("false", False)])
     };
 }
 
@@ -58,6 +58,8 @@ pub enum TokenType {
     For,
     Print,
     Println,
+    True,
+    False,
 
     // Ignore
     Comment,
