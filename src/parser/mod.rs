@@ -7,10 +7,11 @@ use anyhow::Result;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-#[allow(dead_code)]
 enum ParserError {
-    #[error("Could not consume: {}", {0})]
+    #[error("Could not consume: '{0:?}'")]
     Consume(String),
+    #[error("Expected expression.")]
+    ExpectedExpression,
 }
 
 #[derive(Debug)]
@@ -24,25 +25,12 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
-    pub fn expression(&mut self) -> Result<Expr> {
-        self.equality()
+    pub fn parse(&mut self) -> Result<Expr> {
+        self.expression()
     }
 
-    fn equality(&mut self) -> Result<Expr> {
-        use TokenType::*;
-        let mut expr: Expr = self.comparison()?;
-
-        while self.match_tokens(vec![BangEqual, EqualEqual]) {
-            let operator = self.previous();
-            let rhs = self.comparison()?;
-            expr = Expr::Binary {
-                left: Box::new(expr),
-                operator: operator,
-                right: Box::new(rhs),
-            };
-        }
-
-        Ok(expr)
+    fn expression(&mut self) -> Result<Expr> {
+        self.equality()
     }
 
     fn match_token(&mut self, tt: TokenType) -> bool {
@@ -98,7 +86,7 @@ impl Parser {
 
             match self.peek().token_type {
                 For | Print | Println => return,
-                _ => ()
+                _ => (),
             }
 
             self.advance();
@@ -109,6 +97,7 @@ impl Parser {
         let token = self.peek();
         if token.token_type == token_type {
             self.advance();
+            return Ok(());
         }
         return Err(ParserError::Consume(msg.to_string()).into());
     }
@@ -116,17 +105,26 @@ impl Parser {
     fn primary(&mut self) -> Result<Expr> {
         use TokenType::*;
 
-        if self.match_token(OpenParen) {
-            let expr = self.expression()?;
-            self.consume(CloseParen, "Expected ')'")?;
-            Ok(Expr::Grouping { expr: Box::new(expr) })
-        } else {
-            let token = self.peek();
-            self.advance();
-            Ok(Expr::Literal {
-                value: LiteralValue::from_token(token)?,
-            })
-        }
+        let token = self.peek();
+        let result = match token.token_type {
+            Number | StringLiteral => {
+                Ok(Expr::Literal {
+                    value: LiteralValue::from_token(token)?,
+                })
+            }
+            OpenParen => {
+                self.advance();
+                let expr = self.expression()?;
+                self.consume(CloseParen, "Expected ')' after expression.")?;
+                Ok(Expr::Grouping { expr: Box::new(expr) })
+            }
+            _ => return Err(ParserError::ExpectedExpression.into()),
+        };
+
+        // match token and we can advance pointer
+        self.advance();
+
+        result
     }
 
     fn unary(&mut self) -> Result<Expr> {
@@ -190,12 +188,29 @@ impl Parser {
         }
         Ok(expr)
     }
+
+    fn equality(&mut self) -> Result<Expr> {
+        use TokenType::*;
+        let mut expr: Expr = self.comparison()?;
+
+        while self.match_tokens(vec![BangEqual, EqualEqual]) {
+            let operator = self.previous();
+            let rhs = self.comparison()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator: operator,
+                right: Box::new(rhs),
+            };
+        }
+
+        Ok(expr)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lexer::{LiteralValue::*, Token, TokenType::*, FpsInput};
+    use crate::lexer::{FpsInput, LiteralValue::*, Token, TokenType::*};
 
     macro_rules! token {
         ($token_type: expr, $lexeme: expr, $literal: expr) => {
@@ -214,7 +229,7 @@ mod tests {
         ];
 
         let mut parser = Parser::new(input);
-        let expression = parser.expression();
+        let expression = parser.parse();
 
         assert_eq!(expression.unwrap().to_string(), "(+ 4 20)")
     }
@@ -229,5 +244,17 @@ mod tests {
         let expression = parser.expression();
 
         assert_eq!(expression.unwrap().to_string(), "(== (+ 4 20) (+ 5 6))")
+    }
+
+    #[test]
+    fn test_comparison_paren() {
+        let input = "1 == (2 - 1)";
+        let mut scanner = FpsInput::new(input);
+        scanner.scan_tokens().expect("error scanning tokens");
+
+        let mut parser = Parser::new(scanner.tokens);
+        let expression = parser.expression();
+
+        assert_eq!(expression.unwrap().to_string(), "(== 1 (group (- 2 1)))")
     }
 }

@@ -22,7 +22,7 @@ fn execute(input: &str) -> Result<()> {
     scanner.scan_tokens()?;
 
     let mut parser = Parser::new(scanner.tokens);
-    let expression = parser.expression()?;
+    let expression = parser.parse()?;
 
     println!("{}", expression);
 
