@@ -21,6 +21,8 @@ fn execute(input: &str) -> Result<()> {
     let mut scanner = FpsInput::new(input);
     scanner.scan_tokens()?;
 
+    println!("{:?}", scanner.tokens);
+
     let mut parser = Parser::new(scanner.tokens);
     let expression = parser.parse()?;
 
@@ -36,7 +38,7 @@ fn execute(input: &str) -> Result<()> {
 fn run_prompt() -> Result<()> {
     println!("REPL for FPS Lang");
     println!("-----------------");
-    println!("Type '\\q' or press 'Ctrl+Z' to exit");
+    println!("Type '\\q' to exit");
     let mut buffer = String::new();
     loop {
         buffer.clear();

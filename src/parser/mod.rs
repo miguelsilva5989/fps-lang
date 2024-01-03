@@ -26,7 +26,19 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Result<Expr> {
-        self.expression()
+        let expr = self.expression();
+
+        if !self.is_at_end() {
+            if !self.match_token(TokenType::Semicolon) {
+                println!("{:?}", expr);
+
+                println!("{:?}", self.is_at_end());
+                println!("{:?}", self.peek());
+                panic!("to fix remaining input. ex:   ( 1 )  + 2    only translates to  (group 1)")
+            }
+        }
+
+        expr
     }
 
     fn expression(&mut self) -> Result<Expr> {
@@ -107,11 +119,9 @@ impl Parser {
 
         let token = self.peek();
         let result = match token.token_type {
-            Number | StringLiteral => {
-                Ok(Expr::Literal {
-                    value: LiteralValue::from_token(token)?,
-                })
-            }
+            Number | StringLiteral => Ok(Expr::Literal {
+                value: LiteralValue::from_token(token)?,
+            }),
             OpenParen => {
                 self.advance();
                 let expr = self.expression()?;
