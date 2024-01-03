@@ -1,8 +1,21 @@
-use crate::lexer::Token;
-use std::fmt::{self, Debug, Display, Formatter};
+use crate::lexer::{self, Token};
+use std::fmt::{self, Display, Formatter};
+
+use anyhow::Result;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+enum AstError {
+    #[error("Could not unwrap Lexer Literal Value as a String: {}", {0})]
+    UnwrapString(Option<lexer::LiteralValue>),
+    #[error("Could not unwrap Lexer Literal Value as an i64: {}", {0})]
+    UnwrapInt(Option<lexer::LiteralValue>),
+    #[error("Could not create literal value from token: {}", {0})]
+    LiteralValueCreate(Token),
+}
 
 pub enum LiteralValue {
-    Number(f64),
+    Number(i64),
     StringValue(String),
     True,
     False,
@@ -15,6 +28,32 @@ impl Display for LiteralValue {
             LiteralValue::StringValue(val) => write!(format, "{}", val),
             LiteralValue::True => write!(format, "true"),
             LiteralValue::False => write!(format, "false"),
+        }
+    }
+}
+
+fn unwrap_as_string(literal: Option<lexer::LiteralValue>) -> Result<String> {
+    match literal {
+        Some(lexer::LiteralValue::StringValue(s)) => Ok(s.clone()),
+        Some(lexer::LiteralValue::Identifier(s)) => Ok(s.clone()),
+        _ => return Err(AstError::UnwrapString(literal).into()),
+    }
+}
+
+fn unwrap_as_i64(literal: Option<lexer::LiteralValue>) -> Result<i64> {
+    match literal {
+        Some(lexer::LiteralValue::Int(s)) => Ok(s),
+        _ => return Err(AstError::UnwrapInt(literal).into()),
+    }
+}
+
+impl LiteralValue {
+    pub fn from_token(token: Token) -> Result<Self> {
+        use crate::lexer::TokenType::*;
+        match token.token_type {
+            StringLiteral => Ok(LiteralValue::StringValue(unwrap_as_string(token.literal)?)),
+            Number => Ok(LiteralValue::Number(unwrap_as_i64(token.literal)?)),
+            _ => return Err(AstError::LiteralValueCreate(token).into()),
         }
     }
 }
@@ -60,12 +99,12 @@ mod tests {
 
         let minus_token = Token::new(TokenType::Minus, "-".to_string(), None, 0, 0);
         let num = Literal {
-            value: LiteralValue::Number(123.0),
+            value: LiteralValue::Number(123),
         };
 
         let group = Grouping {
             expr: Box::new(Literal {
-                value: LiteralValue::Number(45.67),
+                value: LiteralValue::Number(45),
             }),
         };
         let multi = Token::new(TokenType::Star, "*".to_string(), None, 0, 0);
@@ -79,6 +118,6 @@ mod tests {
             right: Box::new(group),
         };
 
-        assert_eq!(ast.to_string(), "(* (- 123) (group 45.67))".to_string());
+        assert_eq!(ast.to_string(), "(* (- 123) (group 45))".to_string());
     }
 }

@@ -8,7 +8,7 @@ use anyhow::Result;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-enum FpsError {
+enum LexerError {
     #[error("Unrecognized char '{0}' at line {1}")]
     UnrecognizedChar(char, usize),
     #[error("Unterminated consumption until char '{0:?}' at line {2}. Consumed: {1}")]
@@ -79,7 +79,7 @@ pub enum LiteralValue {
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
-    literal: Option<LiteralValue>,
+    pub literal: Option<LiteralValue>,
     line: usize,
     pos: usize,
 }
@@ -184,11 +184,11 @@ impl<'a> FpsInput<'a> {
                             self.current += 1;
                         }
                     } else {
-                        return Err(FpsError::UnterminatedConsumption(chars, consumed, self.line).into());
+                        return Err(LexerError::UnterminatedConsumption(chars, consumed, self.line).into());
                     }
                 }
                 //Eof
-                Err(_) => return Err(FpsError::UnterminatedConsumption(chars, consumed, self.line).into()),
+                Err(_) => return Err(LexerError::UnterminatedConsumption(chars, consumed, self.line).into()),
             }
         }
         Ok(consumed)
@@ -364,7 +364,7 @@ impl<'a> FpsInput<'a> {
                         }
                     } else {
                         self.current += 1;
-                        return Err(FpsError::UnrecognizedChar(ch, self.line).into());
+                        return Err(LexerError::UnrecognizedChar(ch, self.line).into());
                     }
                 }
             };
