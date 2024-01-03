@@ -28,8 +28,8 @@ fn execute(input: &str) -> Result<()> {
     let expression = parser.parse()?;
     println!("expr: {}", expression);
     
-    let result = expression.evaluate()?;
-    println!("res : {}", result);
+    let result = expression.evaluate();
+    println!("res : {:?}", result);
 
     // for token in scanner.tokens {
     //     println!("Token {}", token);
