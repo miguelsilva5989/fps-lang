@@ -1,9 +1,10 @@
-use super::arithmetic::Expr;
+use crate::lexer::Token;
+use super::expr::Expr;
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Statement {
     ArithmeticExpr(Expr),
     Print(Expr),
-    Assign { id: String, expr: Expr },
+    Declaration { id: Token, expr: Expr },
 }

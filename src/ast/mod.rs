@@ -1,8 +1,9 @@
 use thiserror::Error;
 
-pub mod arithmetic;
+pub mod expr;
 pub mod literal;
 pub mod statement;
+pub mod env;
 
 use crate::lexer::{self, Token, TokenType};
 use literal::LiteralValue;

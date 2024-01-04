@@ -5,7 +5,7 @@ use super::literal::LiteralValue;
 use super::AstError;
 use crate::lexer::{Token, TokenType};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,
@@ -22,6 +22,9 @@ pub enum Expr {
         operator: Token,
         right: Box<Expr>,
     },
+    Declaration {
+        id: Token
+    }
 }
 
 impl Display for Expr {
@@ -31,6 +34,7 @@ impl Display for Expr {
             Expr::Grouping { expr } => write!(format, "(group {})", expr),
             Expr::Literal { value } => write!(format, "{}", value),
             Expr::Unary { operator, right } => write!(format, "({} {})", operator.lexeme, right),
+            Expr::Declaration { id } => write!(format, "(var {})", id.lexeme),
         }
     }
 }
@@ -83,24 +87,25 @@ impl Expr {
 
     pub fn evaluate(&self) -> Result<LiteralValue> {
         match self {
+            Expr::Declaration { id } => Ok(todo!()),
             Expr::Grouping { expr } => expr.evaluate(),
             Expr::Literal { value } => Ok((*value).clone()),
             Expr::Unary { operator, right } => {
                 let rhs = right.evaluate()?;
-
+                
                 let result = match (&rhs, operator.token_type) {
                     (LiteralValue::Number(num), TokenType::Minus) => Ok(LiteralValue::Number(-num)),
                     (_, TokenType::Minus) => Err(AstError::Unimplemented(TokenType::Minus, rhs).into()),
                     (any, TokenType::Bang) => Ok(any.is_falsy()),
                     _ => Err(AstError::Unreachable(self.to_string()).into()),
                 };
-
+                
                 result
             }
             Expr::Binary { left, operator, right } => {
                 let lhs = left.evaluate()?;
                 let rhs = right.evaluate()?;
-
+                
                 if matches!(lhs, LiteralValue::Number(_)) && matches!(rhs, LiteralValue::Number(_)) {
                     return self.evaluate_numeric_arithmetic_expression(lhs, rhs, operator);
                 } else if matches!(lhs, LiteralValue::StringValue(_)) && matches!(rhs, LiteralValue::StringValue(_)) {

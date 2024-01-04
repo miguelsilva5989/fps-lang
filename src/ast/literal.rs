@@ -10,6 +10,7 @@ pub enum LiteralValue {
     Number(f64),
     StringValue(String),
     Boolean(bool),
+    Null,
 }
 
 impl Display for LiteralValue {
@@ -21,6 +22,7 @@ impl Display for LiteralValue {
                 true => write!(format, "true"),
                 false => write!(format, "false"),
             },
+            LiteralValue::Null => write!(format, "None"),
         }
     }
 }
@@ -110,6 +112,7 @@ impl LiteralValue {
                 }
             }
             Boolean(val) => LiteralValue::Boolean(!*val),
+            Null => LiteralValue::Boolean(true),
         }
     }
 }

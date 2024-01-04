@@ -1,4 +1,4 @@
-use crate::ast::{arithmetic::Expr, literal::LiteralValue, statement::Statement};
+use crate::ast::{expr::Expr, literal::LiteralValue, statement::Statement};
 
 use anyhow::Result;
 
@@ -23,7 +23,7 @@ impl Interpreter {
                     let value = expr.evaluate()?;
                     println!("{value}");
                 }
-                Statement::Assign { id, expr } => todo!(),
+                Statement::Declaration { id, expr } => todo!(),
             };
         }
 

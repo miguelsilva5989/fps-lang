@@ -1,5 +1,5 @@
 use crate::{
-    ast::{arithmetic::Expr, literal::LiteralValue, statement::Statement},
+    ast::{expr::Expr, literal::LiteralValue, statement::Statement},
     lexer::{Token, TokenType, KEYWORDS},
 };
 
@@ -12,6 +12,8 @@ enum ParserError {
     Consume(String),
     #[error("Expected expression.")]
     ExpectedExpression,
+    #[error("Invalid variable declaration: '{0}'")]
+    Declaration(String),
     #[error("Errors parsing: {0:?}")]
     MultipleErrors(Vec<String>),
 }
@@ -32,7 +34,7 @@ impl Parser {
         let mut errors: Vec<String> = vec![];
 
         while !self.is_at_end() {
-            let statement = self.statement();
+            let statement = self.declaration();
             match statement {
                 Ok(s) => statements.push(s),
                 Err(err) => errors.push(err.to_string()),
@@ -62,23 +64,45 @@ impl Parser {
         // expr
     }
 
+    fn declaration(&mut self) -> Result<Statement> {
+        if self.match_token(TokenType::Declaration) {
+            match self.declaration_statement() {
+                Ok(s) => Ok(s),
+                Err(err) => {
+                    self.synchronize();
+                    return Err(ParserError::Declaration(err.to_string()).into());
+                }
+            }
+        } else {
+            self.statement()
+        }
+    }
+
     fn statement(&mut self) -> Result<Statement> {
         use TokenType::*;
         // println!("tt is {:?}", self.peek().token_type);
 
         if self.match_token(Print) {
             self.print_statement()
-        } else if self.match_token(Assign) {
-            self.assign_statement()
+        } else if self.match_token(Declaration) {
+            self.declaration_statement()
         } else {
             self.expression_statement()
         }
     }
 
     fn print_statement(&mut self) -> Result<Statement> {
-        let expr = self.expression()?;
+        self.consume(TokenType::OpenParen, "Expected '('")?;
+        let mut expressions = self.eval_until(TokenType::CloseParen)?;
+        
+        if expressions.len() == 0 {
+            todo!("return error")
+        }
+        
         self.consume(TokenType::Semicolon, "Expected ';'")?;
-        Ok(Statement::Print(expr))
+
+
+        Ok(Statement::Print(expressions.remove(0)))
     }
 
     fn expression_statement(&mut self) -> Result<Statement> {
@@ -87,10 +111,20 @@ impl Parser {
         Ok(Statement::ArithmeticExpr(expr))
     }
 
-    fn assign_statement(&mut self) -> Result<Statement> {
-        todo!()
-    }
+    fn declaration_statement(&mut self) -> Result<Statement> {
+        use TokenType::*;
+        let token = self.consume(Identifer, "Expected variable name")?;
 
+        let expr = if self.match_token(Equal) {
+            self.expression()?
+        } else {
+            Expr::Literal { value: LiteralValue::Null }
+        };
+
+        self.consume(Semicolon, "Expected ';'")?;
+
+        Ok(Statement::Declaration { id: token, expr })
+    }
 
     fn expression(&mut self) -> Result<Expr> {
         self.equality()
@@ -156,11 +190,28 @@ impl Parser {
         }
     }
 
-    fn consume(&mut self, token_type: TokenType, msg: &str) -> Result<()> {
+    fn eval_until(&mut self, token_type: TokenType) -> Result<Vec<Expr>> {
+        let mut consumed: Vec<Expr> = vec![];
+
+        loop {
+            consumed.push(self.expression()?);
+            if self.is_at_end() {
+                return Err(ParserError::Consume(format!("Expected '{:?}'", token_type).to_string()).into());
+            }
+            if self.peek().token_type == token_type {
+                self.consume(token_type, "Expected ')'")?;
+                break;
+            }
+        };
+
+        Ok(consumed)
+    }
+
+    fn consume(&mut self, token_type: TokenType, msg: &str) -> Result<Token> {
         let token = self.peek();
         if token.token_type == token_type {
             self.advance();
-            return Ok(());
+            return Ok(self.previous());
         }
         return Err(ParserError::Consume(msg.to_string()).into());
     }
@@ -170,7 +221,7 @@ impl Parser {
 
         let token = self.peek();
         let result = match token.token_type {
-            Number | StringLiteral | True | False => Ok(Expr::Literal {
+            Number | StringLiteral | True | False | Null => Ok(Expr::Literal {
                 value: LiteralValue::from_token(token)?,
             }),
             OpenParen => {
@@ -178,6 +229,11 @@ impl Parser {
                 let expr = self.expression()?;
                 self.consume(CloseParen, "Expected ')' after expression.")?;
                 Ok(Expr::Grouping { expr: Box::new(expr) })
+            }
+            Declaration => {
+                self.advance();
+                let id = self.previous();
+                Ok(Expr::Declaration { id })
             }
             _ => return Err(ParserError::ExpectedExpression.into()),
         };
@@ -317,5 +373,20 @@ mod tests {
         let expression = parser.expression();
 
         assert_eq!(expression.unwrap().to_string(), "(== 1 (group (- 2 1)))")
+    }
+
+    #[test]
+    fn test_print_statement() {
+        use crate::ast::expr::*;
+        let input = "print(1);";
+        let mut scanner = FpsInput::new(input);
+        scanner.scan_tokens().expect("error scanning tokens");
+
+        let mut parser = Parser::new(scanner.tokens);
+        let expression = parser.parse();
+
+        let expected = vec![Statement::Print(Expr::Literal { value: LiteralValue::Number(1.) })];
+
+        assert_eq!(expression.unwrap(), expected)
     }
 }
