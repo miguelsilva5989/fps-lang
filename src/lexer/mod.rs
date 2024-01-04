@@ -53,13 +53,13 @@ pub enum TokenType {
     Identifer,
     StringLiteral,
     Number,
-
+    
     // keywords
+    True,
+    False,
     For,
     Print,
     Println,
-    True,
-    False,
 
     // Ignore
     Comment,

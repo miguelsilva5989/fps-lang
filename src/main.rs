@@ -1,12 +1,14 @@
 use anyhow::Result;
 use clap::Parser as ClapParser;
-use parser::Parser;
 use std::io::{stdin, stdout, Write};
 
+use crate::interpreter::Interpreter;
 use crate::lexer::FpsInput;
+use crate::parser::Parser;
 
-mod lexer;
 mod ast;
+mod interpreter;
+mod lexer;
 mod parser;
 
 #[derive(ClapParser, Debug)]
@@ -17,35 +19,35 @@ struct Cli {
     repl: bool,
 }
 
-fn execute(input: &str) -> Result<()> {
+fn execute(interpreter: &mut Interpreter, input: &str) -> Result<()> {
     let mut scanner = FpsInput::new(input);
     scanner.scan_tokens()?;
 
     println!("{:?}", scanner.tokens);
+    // for token in scanner.tokens {
+    //     println!("Token {}", token);
+    // }
 
     let mut parser = Parser::new(scanner.tokens);
-    
+
     let expression = parser.parse()?;
     println!("expr: {}", expression);
-    
-    let result = expression.evaluate();
+
+    let result = interpreter.interpret(expression);
     match result {
         Ok(res) => println!("{}", res),
         Err(res) => println!("ERROR: {:?}", res),
     }
 
-    // for token in scanner.tokens {
-    //     println!("Token {}", token);
-    // }
-
     Ok(())
 }
 
 fn run_prompt() -> Result<()> {
-    println!("REPL for FPS Lang");
-    println!("-----------------");
+    println!("# REPL  -  FPS Lang #");
+    println!("----------_---------");
     println!("Type '\\q' to exit");
     let mut buffer = String::new();
+    let mut interpreter: Interpreter = Interpreter::new();
     loop {
         buffer.clear();
         print!("fps> ");
@@ -58,32 +60,27 @@ fn run_prompt() -> Result<()> {
             break;
         }
 
-        execute(&buffer)?;
+        execute(&mut interpreter, &buffer)?;
     }
     Ok(())
 }
 
-// fn run_file(input: &str) -> Result<()> {
-//     todo!("fix line POS");
-//     let mut scanner = FpsInput::new(input);
-//     for line in input.lines() {
-//         scanner.scan_tokens()?;
-//     }
+fn run_file(input: &str) -> Result<()> {
+    let mut interpreter: Interpreter = Interpreter::new();
+    execute(&mut interpreter, input)?;
 
-//     for token in scanner.tokens {
-//         println!("Token {}", token);
-//     }
+    todo!("fix line POS and multiline processing");
 
-//     Ok(())
-// }
+    Ok(())
+}
 
 fn main() -> Result<()> {
     let args = Cli::parse();
 
     if !args.repl {
-        todo!();
-        // let input = include_str!("sample.fps");
-        // run_file(input)?;
+        // todo!();
+        let input = include_str!("sample.fps");
+        run_file(input)?;
     } else {
         run_prompt()?
     }

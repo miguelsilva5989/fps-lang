@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expr, LiteralValue},
+    ast::{literal::LiteralValue, arithmetic::Expr},
     lexer::{Token, TokenType, KEYWORDS},
 };
 
