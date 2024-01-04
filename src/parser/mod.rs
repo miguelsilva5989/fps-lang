@@ -14,6 +14,8 @@ enum ParserError {
     ExpectedExpression,
     #[error("Invalid variable declaration: '{0}'")]
     Declaration(String),
+    #[error("Invalid assignment target")]
+    InvalidAssignment,
     #[error("Errors parsing: {0:?}")]
     MultipleErrors(Vec<String>),
 }
@@ -72,7 +74,7 @@ impl Parser {
             match self.declaration_statement() {
                 Ok(s) => Ok(s),
                 Err(err) => {
-                    // self.synchronize();
+                    self.synchronize();
                     return Err(ParserError::Declaration(err.to_string()).into());
                 }
             }
@@ -128,8 +130,24 @@ impl Parser {
         Ok(Statement::Declaration { id: token, expr })
     }
 
+    fn assignment(&mut self) -> Result<Expr> {
+        let expr = self.equality()?;
+
+        if self.match_token(TokenType::Equal) {
+            let _equals = self.previous();
+            let val = self.assignment()?;
+
+            match expr {
+                Expr::Variable { id } => return Ok(Expr::Assign { id, value: Box::new(val) }),
+                _ => return Err(ParserError::InvalidAssignment.into()),
+            }
+        }
+
+        Ok(expr)
+    }
+
     fn expression(&mut self) -> Result<Expr> {
-        self.equality()
+        self.assignment()
     }
 
     fn match_token(&mut self, tt: TokenType) -> bool {

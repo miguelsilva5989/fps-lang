@@ -22,7 +22,7 @@ impl Display for LiteralValue {
                 true => write!(format, "true"),
                 false => write!(format, "false"),
             },
-            LiteralValue::Null => write!(format, "None"),
+            LiteralValue::Null => write!(format, "Null"),
         }
     }
 }

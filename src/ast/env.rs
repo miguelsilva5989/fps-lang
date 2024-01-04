@@ -14,7 +14,7 @@ enum AstError {
 }
 
 
-
+#[derive(Debug, Clone)]
 pub struct Environment {
     variables: BTreeMap<String, LiteralValue>,
 }
@@ -40,6 +40,11 @@ impl Environment {
 
         self.variables.insert(name.clone(), value);
 
+        Ok(())
+    }
+
+    pub fn assign(&mut self, name: String, value: LiteralValue) -> Result<()> {
+        self.variables.entry(name).and_modify(|v| *v = value);
         Ok(())
     }
 }

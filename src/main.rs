@@ -23,14 +23,14 @@ fn execute(interpreter: &mut Interpreter, input: &str) -> Result<()> {
     let mut scanner = FpsInput::new(input);
     scanner.scan_tokens()?;
 
-    println!("{:?}", scanner.tokens);
+    // println!("{:?}", scanner.tokens);
 
     let mut parser = Parser::new(scanner.tokens);
 
     let res = parser.parse();
     match res {
         Ok(statements) => {
-            println!("statements: {:?}", statements);
+            // println!("statements: {:?}", statements);
             interpreter.interpret(statements)?;
         }
         Err(res) => println!("ERROR: {:?}", res),

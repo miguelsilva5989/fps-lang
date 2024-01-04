@@ -17,14 +17,14 @@ impl Interpreter {
         for statement in statements {
             match statement {
                 Statement::ArithmeticExpr(expr) => {
-                    expr.eval(&self.environment)?;
+                    expr.eval(&mut self.environment)?;
                 }
                 Statement::Print(expr) => {
-                    let value = expr.eval(&self.environment)?;
+                    let value = expr.eval(&mut self.environment)?;
                     println!("{value}");
                 }
                 Statement::Declaration { id, expr } => {
-                    let value = expr.eval(&self.environment)?;
+                    let value = expr.eval(&mut self.environment)?;
 
                     self.environment.declare(id.lexeme, value)?;
                     // println!("{value}");

@@ -25,6 +25,10 @@ pub enum Expr {
     Variable {
         id: Token,
     },
+    Assign {
+        id: Token,
+        value: Box<Expr>
+    }
 }
 
 impl Display for Expr {
@@ -35,6 +39,7 @@ impl Display for Expr {
             Expr::Literal { value } => write!(format, "{}", value),
             Expr::Unary { operator, right } => write!(format, "({} {})", operator.lexeme, right),
             Expr::Variable { id } => write!(format, "(var {})", id.lexeme),
+            Expr::Assign { id, value } => write!(format, "({} = {})", id.lexeme, value),
         }
     }
 }
@@ -85,12 +90,18 @@ impl Expr {
         }
     }
 
-    pub fn eval(&self, environment: &Environment) -> Result<LiteralValue> {
+    pub fn eval(&self, environment: &mut Environment) -> Result<LiteralValue> {
         match self {
             Expr::Variable { id } => {
                 let val = environment.get(id.lexeme.to_owned())?;
                 Ok(val)
             }
+            Expr::Assign { id, value } => {
+                environment.get(id.lexeme.to_owned())?;
+                let value = value.eval(&mut environment.clone())?;
+                environment.assign(id.lexeme.to_owned(), value)?;
+                Ok(environment.get(id.lexeme.to_owned())?)
+            },
             Expr::Grouping { expr } => expr.eval(environment),
             Expr::Literal { value } => Ok((*value).clone()),
             Expr::Unary { operator, right } => {
