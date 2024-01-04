@@ -98,7 +98,7 @@ impl Expr {
             }
             Expr::Assign { id, value } => {
                 environment.get(id.lexeme.to_owned())?;
-                let value = value.eval(&mut environment.clone())?;
+                let value = value.eval(&mut *environment)?;
                 environment.assign(id.lexeme.to_owned(), value)?;
                 Ok(environment.get(id.lexeme.to_owned())?)
             },
