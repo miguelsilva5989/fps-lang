@@ -24,20 +24,31 @@ fn execute(interpreter: &mut Interpreter, input: &str) -> Result<()> {
     scanner.scan_tokens()?;
 
     println!("{:?}", scanner.tokens);
-    // for token in scanner.tokens {
-    //     println!("Token {}", token);
-    // }
 
     let mut parser = Parser::new(scanner.tokens);
 
-    let expression = parser.parse()?;
-    println!("expr: {}", expression);
-
-    let result = interpreter.interpret(expression);
-    match result {
-        Ok(res) => println!("{}", res),
+    let res = parser.parse();
+    match res {
+        Ok(statements) => {
+            println!("statements: {:?}", statements);
+            interpreter.interpret(statements)?;
+        }
         Err(res) => println!("ERROR: {:?}", res),
     }
+
+    // for statement in statements {
+
+    //     // match statement {
+    //     //     ast::statement::Statement::ArithmeticExpr(expr) => {
+    //     //         interpreter.interpret_expr(expr)?;
+    //     //     }
+    //     //     // ast::statement::Statement::Print(_) => todo!(),
+    //     //     // ast::statement::Statement::Assign { id, expr } => todo!(),
+    //     //     _ => todo!(),
+    //     // }
+
+    //     // let result =
+    // }
 
     Ok(())
 }

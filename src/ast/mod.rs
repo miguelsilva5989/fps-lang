@@ -2,7 +2,7 @@ use thiserror::Error;
 
 pub mod arithmetic;
 pub mod literal;
-mod statement;
+pub mod statement;
 
 use crate::lexer::{self, Token, TokenType};
 use literal::LiteralValue;

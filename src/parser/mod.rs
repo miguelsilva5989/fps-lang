@@ -1,5 +1,5 @@
 use crate::{
-    ast::{literal::LiteralValue, arithmetic::Expr},
+    ast::{arithmetic::Expr, literal::LiteralValue, statement::Statement},
     lexer::{Token, TokenType, KEYWORDS},
 };
 
@@ -12,6 +12,8 @@ enum ParserError {
     Consume(String),
     #[error("Expected expression.")]
     ExpectedExpression,
+    #[error("Errors parsing: {0:?}")]
+    MultipleErrors(Vec<String>),
 }
 
 #[derive(Debug)]
@@ -25,24 +27,70 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<Expr> {
-        let expr = self.expression();
+    pub fn parse(&mut self) -> Result<Vec<Statement>> {
+        let mut statements: Vec<Statement> = vec![];
+        let mut errors: Vec<String> = vec![];
 
-        if !self.is_at_end() {
-            if !self.match_token(TokenType::Semicolon) {
-                println!("{:?}", self);
-                println!("{:?}", expr);
-
-                println!("{:?}", self.is_at_end());
-                println!("{:?}", self.peek());
-
-                panic!("to fix remaining input. ex:   ( 1 )  + 2    only translates to  (group 1)");
-                todo!();
+        while !self.is_at_end() {
+            let statement = self.statement();
+            match statement {
+                Ok(s) => statements.push(s),
+                Err(err) => errors.push(err.to_string()),
             }
         }
 
-        expr
+        if errors.len() > 0 {
+            return Err(ParserError::MultipleErrors(errors).into());
+        }
+        Ok(statements)
+
+        // let expr = self.expression();
+
+        // if !self.is_at_end() {
+        //     if !self.match_token(TokenType::Semicolon) {
+        //         println!("{:?}", self);
+        //         println!("{:?}", expr);
+
+        //         println!("{:?}", self.is_at_end());
+        //         println!("{:?}", self.peek());
+
+        //         panic!("to fix remaining input. ex:   ( 1 )  + 2    only translates to  (group 1)");
+        //         todo!();
+        //     }
+        // }
+
+        // expr
     }
+
+    fn statement(&mut self) -> Result<Statement> {
+        use TokenType::*;
+        // println!("tt is {:?}", self.peek().token_type);
+
+        if self.match_token(Print) {
+            self.print_statement()
+        } else if self.match_token(Assign) {
+            self.assign_statement()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn print_statement(&mut self) -> Result<Statement> {
+        let expr = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expected ';'")?;
+        Ok(Statement::Print(expr))
+    }
+
+    fn expression_statement(&mut self) -> Result<Statement> {
+        let expr = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expected ';'")?;
+        Ok(Statement::ArithmeticExpr(expr))
+    }
+
+    fn assign_statement(&mut self) -> Result<Statement> {
+        todo!()
+    }
+
 
     fn expression(&mut self) -> Result<Expr> {
         self.equality()
@@ -242,7 +290,7 @@ mod tests {
         ];
 
         let mut parser = Parser::new(input);
-        let expression = parser.parse();
+        let expression = parser.expression();
 
         assert_eq!(expression.unwrap().to_string(), "(+ 4 20)")
     }

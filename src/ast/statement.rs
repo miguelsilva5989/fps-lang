@@ -1,7 +1,9 @@
 use super::arithmetic::Expr;
 
+
+#[derive(Debug)]
 pub enum Statement {
-    Arithmetic(Expr),
+    ArithmeticExpr(Expr),
     Print(Expr),
     Assign { id: String, expr: Expr },
 }
