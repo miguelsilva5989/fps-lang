@@ -1,3 +1,5 @@
+use std::string::ToString;
+use strum_macros::Display;
 use lazy_static::lazy_static;
 use std::{
     collections::HashMap,
@@ -17,11 +19,19 @@ enum LexerError {
 lazy_static! {
     pub static ref KEYWORDS: HashMap<&'static str, TokenType> = {
         use TokenType::*;
-        HashMap::from([("let", Declaration), ("for", For), ("print", Print), ("println", Println), ("true", True), ("false", False), ("null", Null)])
+        HashMap::from([
+            ("let", Declaration),
+            ("for", For),
+            ("print", Print),
+            ("println", Println),
+            ("true", True),
+            ("false", False),
+            ("null", Null),
+        ])
     };
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Display)]
 pub enum TokenType {
     // single char
     Fps, // #
@@ -35,11 +45,11 @@ pub enum TokenType {
     Minus,
     Star,
     Slash,
-    
+
     // 1/2 chars long
     Equal,
     EqualEqual,
-    Bang, // !
+    Bang,      // !
     BangEqual, // !=
     Greater,
     GreaterEqual,
@@ -47,13 +57,12 @@ pub enum TokenType {
     LessEqual,
 
     // symbols
-    
 
     // literals
     Identifer,
     StringLiteral,
     Number,
-    
+
     // keywords
     Declaration, // let
     True,
@@ -70,7 +79,7 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Display)]
 pub enum LiteralValue {
     Float(f64),
     // Float(f64),
@@ -90,11 +99,20 @@ pub struct Token {
 
 impl Display for Token {
     fn fmt(&self, format: &mut Formatter) -> fmt::Result {
-        write!(
-            format,
-            "{:?} {} {:?} line {} pos {}",
-            self.token_type, self.lexeme, self.literal, self.line, self.pos
-        )
+        match &self.literal {
+            Some(literal) => write!(
+                format,
+                "{} {} {} line {} pos {}",
+                self.token_type, self.lexeme, literal, self.line, self.pos
+            ),
+            None =>  write!(
+                format,
+                "{} {} None line {} pos {}",
+                self.token_type, self.lexeme, self.line, self.pos
+            ),
+        }
+        
+        
     }
 }
 
@@ -116,6 +134,16 @@ pub struct FpsInput<'a> {
     start: usize,
     current: usize,
     line: usize,
+}
+
+impl Display for FpsInput<'_> {
+    fn fmt(&self, format: &mut Formatter<'_>) -> fmt::Result {
+        write!(format, "Lexer:\n")?;
+        for v in &self.tokens {
+            write!(format, "\t{}\n", v)?;
+        }
+        Ok(())
+    }
 }
 
 macro_rules! token {
@@ -147,9 +175,9 @@ impl<'a> FpsInput<'a> {
         while !self.is_at_end() {
             self.start = self.current;
             if let Some(token) = self.tokenzine()? {
-                // ignore whitespaces
                 match token.token_type {
-                    TokenType::Whitespace => {}
+                    // ignore whitespaces
+                    TokenType::Whitespace | TokenType::Eol => {},
                     _ => self.tokens.push(token),
                 }
             } else {
@@ -157,7 +185,6 @@ impl<'a> FpsInput<'a> {
             }
         }
 
-        self.line += 1;
         self.tokens.push(self.create_token(TokenType::Eof, "".to_owned(), None));
 
         Ok(())
@@ -278,10 +305,10 @@ impl<'a> FpsInput<'a> {
             use TokenType::*;
             let token = match ch {
                 // whitespaces
-                ' ' | '\t' => self.create_token(Whitespace, ch.into(), None),
-                '\n' | '\r' => {
+                ' ' | '\t' | '\r' => self.create_token(Whitespace, "WS".to_owned(), None),
+                '\n' => {
                     self.line += 1;
-                    self.create_token(Eol, ch.into(), None)
+                    self.create_token(Eol, "Eol".to_owned(), None)
                 }
                 // operations
                 '+' => self.create_token(Plus, ch.into(), None),
@@ -340,7 +367,11 @@ impl<'a> FpsInput<'a> {
                 // literals
                 '"' => {
                     let string_literal = self.consume_string()?;
-                    self.create_token(StringLiteral, string_literal.clone(), Some(LiteralValue::StringValue(string_literal)))
+                    self.create_token(
+                        StringLiteral,
+                        string_literal.clone(),
+                        Some(LiteralValue::StringValue(string_literal)),
+                    )
                 }
 
                 _ => {
@@ -411,12 +442,12 @@ mod tests {
     #[test]
     fn comment() {
         let input = "//I am a comment\n";
-        let expected = vec![Comment, Eol, Eof];
+        let expected = vec![Comment, Eof];
 
         let mut scanner = FpsInput::new(input);
         let _ = scanner.scan_tokens();
 
-        assert_eq!(scanner.tokens.len(), 3); //Eof counts as a Token
+        assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
         assert_eq!(scanner.tokens[0].lexeme, "I am a comment");
         assert_eq!(
             scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),

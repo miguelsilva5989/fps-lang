@@ -23,7 +23,7 @@ fn execute(interpreter: &mut Interpreter, input: &str) -> Result<()> {
     let mut scanner = FpsInput::new(input);
     scanner.scan_tokens()?;
 
-    // println!("{:?}", scanner.tokens);
+    println!("{}", scanner);
 
     let mut parser = Parser::new(scanner.tokens);
 
@@ -80,7 +80,7 @@ fn run_file(input: &str) -> Result<()> {
     let mut interpreter: Interpreter = Interpreter::new();
     execute(&mut interpreter, input)?;
 
-    todo!("fix line POS and multiline processing");
+    // todo!("fix line POS and multiline processing");
 
     Ok(())
 }
