@@ -37,7 +37,10 @@ impl Parser {
             let statement = self.declaration();
             match statement {
                 Ok(s) => statements.push(s),
-                Err(err) => errors.push(err.to_string()),
+                Err(err) => {
+                    errors.push(err.to_string());
+                    self.synchronize();
+                }
             }
         }
 
@@ -69,7 +72,7 @@ impl Parser {
             match self.declaration_statement() {
                 Ok(s) => Ok(s),
                 Err(err) => {
-                    self.synchronize();
+                    // self.synchronize();
                     return Err(ParserError::Declaration(err.to_string()).into());
                 }
             }
@@ -94,13 +97,12 @@ impl Parser {
     fn print_statement(&mut self) -> Result<Statement> {
         self.consume(TokenType::OpenParen, "Expected '('")?;
         let mut expressions = self.eval_until(TokenType::CloseParen)?;
-        
+
         if expressions.len() == 0 {
             todo!("return error")
         }
-        
-        self.consume(TokenType::Semicolon, "Expected ';'")?;
 
+        self.consume(TokenType::Semicolon, "Expected ';'")?;
 
         Ok(Statement::Print(expressions.remove(0)))
     }
@@ -202,7 +204,7 @@ impl Parser {
                 self.consume(token_type, "Expected ')'")?;
                 break;
             }
-        };
+        }
 
         Ok(consumed)
     }
@@ -230,7 +232,7 @@ impl Parser {
                 self.consume(CloseParen, "Expected ')' after expression.")?;
                 Ok(Expr::Grouping { expr: Box::new(expr) })
             }
-            Declaration => {
+            Identifer => {
                 self.advance();
                 let id = self.previous();
                 Ok(Expr::Declaration { id })
@@ -385,7 +387,29 @@ mod tests {
         let mut parser = Parser::new(scanner.tokens);
         let expression = parser.parse();
 
-        let expected = vec![Statement::Print(Expr::Literal { value: LiteralValue::Number(1.) })];
+        let expected = vec![Statement::Print(Expr::Literal {
+            value: LiteralValue::Number(1.),
+        })];
+
+        assert_eq!(expression.unwrap(), expected)
+    }
+
+    #[test]
+    fn declaration() {
+        use crate::ast::expr::*;
+        let input = "let a = 1;";
+        let mut scanner = FpsInput::new(input);
+        scanner.scan_tokens().expect("error scanning tokens");
+
+        let mut parser = Parser::new(scanner.tokens);
+        let expression = parser.parse();
+
+        let expected = vec![Statement::Declaration {
+            id: Token {token_type: Identifer, lexeme: "a".to_owned(), literal: Some(Identifier("a".to_owned())), line: 1, pos: 5},
+            expr: Expr::Literal {
+                value: LiteralValue::Number(1.),
+            },
+        }];
 
         assert_eq!(expression.unwrap(), expected)
     }

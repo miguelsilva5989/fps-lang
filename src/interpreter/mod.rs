@@ -1,29 +1,34 @@
-use crate::ast::{expr::Expr, literal::LiteralValue, statement::Statement};
+use crate::ast::{env::Environment, statement::Statement};
 
 use anyhow::Result;
 
-pub struct Interpreter {}
+pub struct Interpreter {
+    environment: Environment,
+}
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self {}
-    }
-
-    pub fn interpret_expr(&mut self, expr: Expr) -> Result<LiteralValue> {
-        expr.evaluate()
+        Self {
+            environment: Environment::new(),
+        }
     }
 
     pub fn interpret(&mut self, statements: Vec<Statement>) -> Result<()> {
         for statement in statements {
             match statement {
                 Statement::ArithmeticExpr(expr) => {
-                    expr.evaluate()?;
+                    expr.eval(&self.environment)?;
                 }
                 Statement::Print(expr) => {
-                    let value = expr.evaluate()?;
+                    let value = expr.eval(&self.environment)?;
                     println!("{value}");
                 }
-                Statement::Declaration { id, expr } => todo!(),
+                Statement::Declaration { id, expr } => {
+                    let value = expr.eval(&self.environment)?;
+
+                    self.environment.declare(id.lexeme, value)?;
+                    // println!("{value}");
+                }
             };
         }
 

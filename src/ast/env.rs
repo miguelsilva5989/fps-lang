@@ -26,7 +26,7 @@ impl Environment {
         }
     }
 
-    pub fn get(&mut self, name: String) -> Result<LiteralValue> {
+    pub fn get(&self, name: String) -> Result<LiteralValue> {
         match self.variables.get(&name) {
             Some(val) => Ok(val.clone()),
             None => return Err(AstError::NotDeclared(name).into())
