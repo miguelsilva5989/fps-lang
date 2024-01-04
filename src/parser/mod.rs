@@ -87,8 +87,8 @@ impl Parser {
 
         if self.match_token(Print) {
             self.print_statement()
-        } else if self.match_token(Declaration) {
-            self.declaration_statement()
+        // } else if self.match_token(Declaration) {
+        //     self.declaration_statement()
         } else {
             self.expression_statement()
         }
@@ -102,14 +102,14 @@ impl Parser {
             todo!("return error")
         }
 
-        self.consume(TokenType::Semicolon, "Expected ';'")?;
+        self.consume(TokenType::Semicolon, "Expected ';' after statement")?;
 
         Ok(Statement::Print(expressions.remove(0)))
     }
 
     fn expression_statement(&mut self) -> Result<Statement> {
         let expr = self.expression()?;
-        self.consume(TokenType::Semicolon, "Expected ';'")?;
+        self.consume(TokenType::Semicolon, "Expected ';' after statement")?;
         Ok(Statement::ArithmeticExpr(expr))
     }
 
@@ -123,7 +123,7 @@ impl Parser {
             Expr::Literal { value: LiteralValue::Null }
         };
 
-        self.consume(Semicolon, "Expected ';'")?;
+        self.consume(Semicolon, "Expected ';' after declaration")?;
 
         Ok(Statement::Declaration { id: token, expr })
     }
@@ -223,9 +223,12 @@ impl Parser {
 
         let token = self.peek();
         let result = match token.token_type {
-            Number | StringLiteral | True | False | Null => Ok(Expr::Literal {
-                value: LiteralValue::from_token(token)?,
-            }),
+            Number | StringLiteral | True | False | Null => {
+                self.advance();
+                Ok(Expr::Literal {
+                    value: LiteralValue::from_token(token)?,
+                })
+            }
             OpenParen => {
                 self.advance();
                 let expr = self.expression()?;
@@ -235,13 +238,13 @@ impl Parser {
             Identifer => {
                 self.advance();
                 let id = self.previous();
-                Ok(Expr::Declaration { id })
+                Ok(Expr::Variable { id })
             }
-            _ => return Err(ParserError::ExpectedExpression.into()),
+            _ => {
+                // println!("{:?}", token);
+                return Err(ParserError::ExpectedExpression.into());
+            }
         };
-
-        // match token and we can advance pointer
-        self.advance();
 
         result
     }
@@ -405,11 +408,54 @@ mod tests {
         let expression = parser.parse();
 
         let expected = vec![Statement::Declaration {
-            id: Token {token_type: Identifer, lexeme: "a".to_owned(), literal: Some(Identifier("a".to_owned())), line: 1, pos: 5},
+            id: Token {
+                token_type: Identifer,
+                lexeme: "a".to_owned(),
+                literal: Some(Identifier("a".to_owned())),
+                line: 1,
+                pos: 5,
+            },
             expr: Expr::Literal {
                 value: LiteralValue::Number(1.),
             },
         }];
+
+        assert_eq!(expression.unwrap(), expected)
+    }
+
+    #[test]
+    fn declaration_print() {
+        use crate::ast::expr::*;
+        let input = "let a = 1;print(a);";
+        let mut scanner = FpsInput::new(input);
+        scanner.scan_tokens().expect("error scanning tokens");
+
+        let mut parser = Parser::new(scanner.tokens);
+        let expression = parser.parse();
+
+        let expected = vec![
+            Statement::Declaration {
+                id: Token {
+                    token_type: Identifer,
+                    lexeme: "a".to_owned(),
+                    literal: Some(Identifier("a".to_owned())),
+                    line: 1,
+                    pos: 5,
+                },
+                expr: Expr::Literal {
+                    value: LiteralValue::Number(1.),
+                },
+            },
+            Statement::Print(Expr::Variable {
+                id: Token {
+                    token_type: Identifer,
+                    lexeme: "a".to_owned(),
+                    literal: Some(Identifier("a".to_owned())),
+                    line: 1,
+                    pos: 17,
+                },
+            }),
+        ];
 
         assert_eq!(expression.unwrap(), expected)
     }

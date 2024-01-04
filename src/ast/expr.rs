@@ -22,7 +22,7 @@ pub enum Expr {
         operator: Token,
         right: Box<Expr>,
     },
-    Declaration {
+    Variable {
         id: Token,
     },
 }
@@ -34,7 +34,7 @@ impl Display for Expr {
             Expr::Grouping { expr } => write!(format, "(group {})", expr),
             Expr::Literal { value } => write!(format, "{}", value),
             Expr::Unary { operator, right } => write!(format, "({} {})", operator.lexeme, right),
-            Expr::Declaration { id } => write!(format, "(var {})", id.lexeme),
+            Expr::Variable { id } => write!(format, "(var {})", id.lexeme),
         }
     }
 }
@@ -87,7 +87,10 @@ impl Expr {
 
     pub fn eval(&self, environment: &Environment) -> Result<LiteralValue> {
         match self {
-            Expr::Declaration { id } => Ok(environment.get(id.lexeme.to_owned())?),
+            Expr::Variable { id } => {
+                let val = environment.get(id.lexeme.to_owned())?;
+                Ok(val)
+            }
             Expr::Grouping { expr } => expr.eval(environment),
             Expr::Literal { value } => Ok((*value).clone()),
             Expr::Unary { operator, right } => {
