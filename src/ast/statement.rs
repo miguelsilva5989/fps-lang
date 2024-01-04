@@ -7,4 +7,5 @@ pub enum Statement {
     ArithmeticExpr(Expr),
     Print(Expr),
     Declaration { id: Token, expr: Expr },
+    Fps(Token)
 }

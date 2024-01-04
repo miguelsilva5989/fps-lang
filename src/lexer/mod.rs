@@ -1,10 +1,10 @@
-use std::string::ToString;
-use strum_macros::Display;
 use lazy_static::lazy_static;
+use std::string::ToString;
 use std::{
     collections::HashMap,
     fmt::{self, Debug, Display, Formatter},
 };
+use strum_macros::Display;
 
 use anyhow::Result;
 use thiserror::Error;
@@ -34,7 +34,8 @@ lazy_static! {
 #[derive(Debug, Copy, Clone, PartialEq, Display)]
 pub enum TokenType {
     // single char
-    Fps, // #
+    Fps,    // #
+    FpsEnd, // ## End program
     Semicolon,
     Colon,
     OpenParen,
@@ -86,6 +87,7 @@ pub enum LiteralValue {
     StringValue(String),
     Identifier(String),
     Keyword(String),
+    Fps(usize),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -95,6 +97,7 @@ pub struct Token {
     pub literal: Option<LiteralValue>,
     pub line: usize,
     pub pos: usize,
+    pub fps: usize,
 }
 
 impl Display for Token {
@@ -102,28 +105,27 @@ impl Display for Token {
         match &self.literal {
             Some(literal) => write!(
                 format,
-                "{} {} {} line {} pos {}",
-                self.token_type, self.lexeme, literal, self.line, self.pos
+                "{} {} {} line {} pos {} fps {}",
+                self.token_type, self.lexeme, literal, self.line, self.pos, self.fps
             ),
-            None =>  write!(
+            None => write!(
                 format,
-                "{} {} None line {} pos {}",
-                self.token_type, self.lexeme, self.line, self.pos
+                "{} {} None line {} pos {} fps {}",
+                self.token_type, self.lexeme, self.line, self.pos, self.fps
             ),
         }
-        
-        
     }
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, lexeme: String, literal: Option<LiteralValue>, line: usize, pos: usize) -> Self {
+    pub fn new(token_type: TokenType, lexeme: String, literal: Option<LiteralValue>, line: usize, pos: usize, fps: usize) -> Self {
         Self {
             token_type,
             lexeme,
             literal,
             line,
             pos,
+            fps,
         }
     }
 }
@@ -134,6 +136,7 @@ pub struct FpsInput<'a> {
     start: usize,
     current: usize,
     line: usize,
+    current_fps: usize,
 }
 
 impl Display for FpsInput<'_> {
@@ -147,8 +150,8 @@ impl Display for FpsInput<'_> {
 }
 
 macro_rules! token {
-    ($token_type: expr, $lexeme: expr, $literal: expr, $line: expr, $pos: expr) => {
-        Token::new($token_type, $lexeme, $literal, $line, $pos)
+    ($token_type: expr, $lexeme: expr, $literal: expr, $line: expr, $pos: expr, $fps: expr) => {
+        Token::new($token_type, $lexeme, $literal, $line, $pos, $fps)
     };
 }
 
@@ -160,6 +163,7 @@ impl<'a> FpsInput<'a> {
             start: 0,
             current: 0,
             line: 1,
+            current_fps: 0,
         }
     }
 
@@ -168,7 +172,7 @@ impl<'a> FpsInput<'a> {
     }
 
     fn create_token(&self, token_type: TokenType, lexeme: String, literal: Option<LiteralValue>) -> Token {
-        token!(token_type, lexeme, literal, self.line, self.current)
+        token!(token_type, lexeme, literal, self.line, self.current, self.current_fps)
     }
 
     pub fn scan_tokens(&mut self) -> Result<()> {
@@ -177,7 +181,10 @@ impl<'a> FpsInput<'a> {
             if let Some(token) = self.tokenzine()? {
                 match token.token_type {
                     // ignore whitespaces
-                    TokenType::Whitespace | TokenType::Eol => {},
+                    TokenType::Whitespace => {}
+                    TokenType::Eol => {
+                        self.line += 1;
+                    }
                     _ => self.tokens.push(token),
                 }
             } else {
@@ -306,10 +313,7 @@ impl<'a> FpsInput<'a> {
             let token = match ch {
                 // whitespaces
                 ' ' | '\t' | '\r' => self.create_token(Whitespace, "WS".to_owned(), None),
-                '\n' => {
-                    self.line += 1;
-                    self.create_token(Eol, "Eol".to_owned(), None)
-                }
+                '\n' => self.create_token(Eol, "Eol".to_owned(), None),
                 // operations
                 '+' => self.create_token(Plus, ch.into(), None),
                 '-' => self.create_token(Minus, ch.into(), None),
@@ -325,13 +329,22 @@ impl<'a> FpsInput<'a> {
                     }
                 }
                 // single char
-                '#' => self.create_token(Fps, ch.into(), None),
                 ':' => self.create_token(Colon, ch.into(), None),
                 ';' => self.create_token(Semicolon, ch.into(), None),
                 '(' => self.create_token(OpenParen, ch.into(), None),
                 ')' => self.create_token(CloseParen, ch.into(), None),
                 '{' => self.create_token(OpenBrace, ch.into(), None),
                 '}' => self.create_token(CloseBrace, ch.into(), None),
+                // single or double char
+                '#' => {
+                    self.current_fps += 1;
+                    if self.is_next_char_match('#') {
+                        self.current += 1;
+                        self.create_token(FpsEnd, "##".to_owned(), None)
+                    } else {
+                        self.create_token(Fps, ch.into(), Some(LiteralValue::Fps(self.current_fps)))
+                    }
+                }
                 '=' => {
                     if self.is_next_char_match('=') {
                         self.current += 1;
@@ -377,9 +390,16 @@ impl<'a> FpsInput<'a> {
                 _ => {
                     if ch.is_digit(10) {
                         let mut num: String = ch.into();
-                        num.push_str(self.consume_number().as_str());
+                        // support multiple FPS
+                        if self.is_next_char_match('#') {
+                            self.current += 1;
+                            self.current_fps += num.parse::<usize>().unwrap();
+                            self.create_token(Fps, format!("{}#", self.current_fps), Some(LiteralValue::Fps(self.current_fps)))
+                        } else {
+                            num.push_str(self.consume_number().as_str());
 
-                        self.create_token(Number, num.clone(), Some(LiteralValue::Float(num.parse::<f64>().unwrap())))
+                            self.create_token(Number, num.clone(), Some(LiteralValue::Float(num.parse::<f64>().unwrap())))
+                        }
                     } else if ch.is_alphabetic() {
                         let mut id: String = ch.into();
                         id.push_str(self.consume_identifier().as_str());

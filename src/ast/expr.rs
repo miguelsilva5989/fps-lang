@@ -27,8 +27,11 @@ pub enum Expr {
     },
     Assign {
         id: Token,
-        value: Box<Expr>
-    }
+        value: Box<Expr>,
+    },
+    // Fps {
+    //     current: usize,
+    // },
 }
 
 impl Display for Expr {
@@ -40,6 +43,7 @@ impl Display for Expr {
             Expr::Unary { operator, right } => write!(format, "({} {})", operator.lexeme, right),
             Expr::Variable { id } => write!(format, "(var {})", id.lexeme),
             Expr::Assign { id, value } => write!(format, "({} = {})", id.lexeme, value),
+            // Expr::Fps { current } => write!(format, "FPS {}", current),
         }
     }
 }
@@ -101,7 +105,7 @@ impl Expr {
                 let value = value.eval(&mut *environment)?;
                 environment.assign(id.lexeme.to_owned(), value)?;
                 Ok(environment.get(id.lexeme.to_owned())?)
-            },
+            }
             Expr::Grouping { expr } => expr.eval(environment),
             Expr::Literal { value } => Ok((*value).clone()),
             Expr::Unary { operator, right } => {
@@ -130,6 +134,7 @@ impl Expr {
                     return Err(AstError::InvalidOperation(lhs, operator.lexeme.clone(), rhs).into());
                 }
             }
+            // Expr::Fps { current } => todo!(),
         }
     }
 }
@@ -144,7 +149,7 @@ mod tests {
     fn pretty_print_ast() {
         use Expr::*;
 
-        let minus_token = Token::new(TokenType::Minus, "-".to_string(), None, 0, 0);
+        let minus_token = Token::new(TokenType::Minus, "-".to_string(), None, 0, 0, 0);
         let num = Literal {
             value: LiteralValue::Number(123.),
         };
@@ -154,7 +159,7 @@ mod tests {
                 value: LiteralValue::Number(45.),
             }),
         };
-        let multi = Token::new(TokenType::Star, "*".to_string(), None, 0, 0);
+        let multi = Token::new(TokenType::Star, "*".to_string(), None, 0, 0, 0);
 
         let ast = Binary {
             left: Box::new(Unary {

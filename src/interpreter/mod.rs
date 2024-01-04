@@ -29,6 +29,9 @@ impl Interpreter {
                     self.environment.declare(id.lexeme, value)?;
                     // println!("{value}");
                 }
+                Statement::Fps(fps) => {
+                    println!("FPS {}", fps)
+                },
             };
         }
 

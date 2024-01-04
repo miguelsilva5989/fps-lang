@@ -10,8 +10,8 @@ use thiserror::Error;
 enum ParserError {
     #[error("Could not consume: '{0:?}'")]
     Consume(String),
-    #[error("Expected expression.")]
-    ExpectedExpression,
+    #[error("Expected expression for token: '{0}' at line {1}")]
+    ExpectedExpression(String, usize),
     #[error("Invalid variable declaration: '{0}'")]
     Declaration(String),
     #[error("Invalid assignment target")]
@@ -89,8 +89,8 @@ impl Parser {
 
         if self.match_token(Print) {
             self.print_statement()
-        // } else if self.match_token(Declaration) {
-        //     self.declaration_statement()
+        } else if self.match_tokens(vec![Fps, FpsEnd]) {
+            Ok(Statement::Fps(self.previous()))
         } else {
             self.expression_statement()
         }
@@ -258,9 +258,13 @@ impl Parser {
                 let id = self.previous();
                 Ok(Expr::Variable { id })
             }
+            Fps => Ok(Expr::Literal {
+                value: LiteralValue::Number(token.fps as f64),
+            }),
+            FpsEnd => Ok(Expr::Literal { value: LiteralValue::Null }),
             _ => {
                 // println!("{:?}", token);
-                return Err(ParserError::ExpectedExpression.into());
+                return Err(ParserError::ExpectedExpression(token.lexeme.to_owned(), token.line).into());
             }
         };
 
@@ -354,7 +358,7 @@ mod tests {
 
     macro_rules! token {
         ($token_type: expr, $lexeme: expr, $literal: expr) => {
-            Token::new($token_type, $lexeme.into(), $literal, 0, 0)
+            Token::new($token_type, $lexeme.into(), $literal, 0, 0, 0)
         };
     }
 
@@ -432,6 +436,7 @@ mod tests {
                 literal: Some(Identifier("a".to_owned())),
                 line: 1,
                 pos: 5,
+                fps: 0,
             },
             expr: Expr::Literal {
                 value: LiteralValue::Number(1.),
@@ -459,6 +464,7 @@ mod tests {
                     literal: Some(Identifier("a".to_owned())),
                     line: 1,
                     pos: 5,
+                    fps: 0,
                 },
                 expr: Expr::Literal {
                     value: LiteralValue::Number(1.),
@@ -471,6 +477,7 @@ mod tests {
                     literal: Some(Identifier("a".to_owned())),
                     line: 1,
                     pos: 17,
+                    fps: 0,
                 },
             }),
         ];
