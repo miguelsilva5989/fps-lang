@@ -24,6 +24,7 @@ enum ParserError {
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
+    // current_fps: usize
 }
 
 impl Parser {
@@ -78,6 +79,10 @@ impl Parser {
                     return Err(ParserError::Declaration(err.to_string()).into());
                 }
             }
+        // } else if self.match_token(TokenType::Fps) {
+        //     let token = self.peek();
+        //     // self.current_fps += token.fps;
+        //     Ok(Statement::Fps(token))
         } else {
             self.statement()
         }
