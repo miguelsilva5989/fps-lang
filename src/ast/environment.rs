@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, rc::Rc};
 use thiserror::Error;
 
 use super::literal::LiteralValue;
@@ -14,7 +14,7 @@ enum AstError {
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    parent: Option<Box<Environment>>,
+    pub parent: Option<Rc<Environment>>,
     variables: BTreeMap<String, LiteralValue>,
 }
 
@@ -32,7 +32,7 @@ impl Environment {
         }
 
         if let Some(parent) = &mut self.parent {
-            return parent.resolve(name);
+            return Rc::get_mut(parent).expect("Could not get mutable reference to environment").resolve(name);
         } else {
             return Err(AstError::NotDeclared(name).into());
         }
@@ -96,7 +96,7 @@ mod tests {
         parent_env.declare("a".to_string(), LiteralValue::Boolean(false)).unwrap();
         
         let mut child_env = Environment {
-            parent: Some(Box::new(parent_env.clone())),
+            parent: Some(Rc::new(parent_env.clone())),
             variables: BTreeMap::new(),
         };
         child_env.declare("a".to_string(), LiteralValue::Boolean(true)).unwrap();

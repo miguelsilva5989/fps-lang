@@ -1,4 +1,6 @@
-use crate::ast::{env::Environment, statement::Statement};
+use std::rc::Rc;
+
+use crate::ast::{environment::Environment, statement::Statement};
 
 use anyhow::Result;
 
@@ -16,6 +18,10 @@ impl Interpreter {
     pub fn interpret(&mut self, statements: Vec<Statement>) -> Result<()> {
         for statement in statements {
             match statement {
+                Statement::Fps(fps) => {
+                    println!("FPS {}", fps)
+                }
+                Statement::Comment(_) => {}
                 Statement::ArithmeticExpr(expr) => {
                     expr.eval(&mut self.environment)?;
                 }
@@ -29,9 +35,14 @@ impl Interpreter {
                     self.environment.declare(id.lexeme, value)?;
                     // println!("{value}");
                 }
-                Statement::Fps(fps) => {
-                    println!("FPS {}", fps)
-                },
+                Statement::Block { statements } => {
+                    let mut new_env = Environment::new();
+                    new_env.parent = Some(Rc::from(self.environment.clone()));
+                    let old_env = self.environment.clone();
+                    self.environment = new_env;
+                    self.interpret(statements)?;
+                    self.environment = old_env;
+                }
             };
         }
 

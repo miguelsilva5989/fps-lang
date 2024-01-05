@@ -3,7 +3,7 @@ use thiserror::Error;
 pub mod expr;
 pub mod literal;
 pub mod statement;
-pub mod env;
+pub mod environment;
 
 use crate::lexer::{self, Token, TokenType};
 use literal::LiteralValue;

@@ -90,14 +90,12 @@ impl Parser {
 
     fn statement(&mut self) -> Result<Statement> {
         use TokenType::*;
-        // println!("tt is {:?}", self.peek().token_type);
-
-        if self.match_token(Print) {
-            self.print_statement()
-        } else if self.match_tokens(vec![Fps, FpsEnd]) {
-            Ok(Statement::Fps(self.previous()))
-        } else {
-            self.expression_statement()
+        match self.advance().token_type {
+            Comment => Ok(Statement::Comment(self.previous())),
+            Fps | FpsEnd => Ok(Statement::Fps(self.previous())),
+            Print => self.print_statement(),
+            OpenBrace => self.block_statement(),
+            _ => self.expression_statement(),
         }
     }
 
@@ -112,6 +110,18 @@ impl Parser {
         self.consume(TokenType::Semicolon, "Expected ';' after statement")?;
 
         Ok(Statement::Print(expressions.remove(0)))
+    }
+
+    fn block_statement(&mut self) -> Result<Statement> {
+        let mut statements: Vec<Statement> = vec![];
+
+        while !self.check_next_token(TokenType::CloseBrace) && !self.is_at_end() {
+            statements.push(self.declaration()?);
+        }
+
+        self.consume(TokenType::CloseBrace, "Expected '}' after block")?;
+
+        Ok(Statement::Block { statements })
     }
 
     fn expression_statement(&mut self) -> Result<Statement> {
@@ -153,6 +163,10 @@ impl Parser {
 
     fn expression(&mut self) -> Result<Expr> {
         self.assignment()
+    }
+
+    fn check_next_token(&mut self, tt: TokenType) -> bool {
+        self.peek().token_type == TokenType::CloseBrace
     }
 
     fn match_token(&mut self, tt: TokenType) -> bool {
@@ -267,6 +281,7 @@ impl Parser {
                 value: LiteralValue::Number(token.fps as f64),
             }),
             FpsEnd => Ok(Expr::Literal { value: LiteralValue::Null }),
+            Comment => Ok(Expr::Ignore { token: token }),
             _ => {
                 // println!("{:?}", token);
                 return Err(ParserError::ExpectedExpression(token.lexeme.to_owned(), token.line).into());

@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::fmt::{self, Display, Formatter};
 
 use super::AstError;
-use super::{env::Environment, literal::LiteralValue};
+use super::{environment::Environment, literal::LiteralValue};
 use crate::lexer::{Token, TokenType};
 
 #[derive(Debug, PartialEq)]
@@ -29,6 +29,9 @@ pub enum Expr {
         id: Token,
         value: Box<Expr>,
     },
+    Ignore {
+        token: Token,
+    },
     // Fps {
     //     current: usize,
     // },
@@ -43,6 +46,7 @@ impl Display for Expr {
             Expr::Unary { operator, right } => write!(format, "({} {})", operator.lexeme, right),
             Expr::Variable { id } => write!(format, "(var {})", id.lexeme),
             Expr::Assign { id, value } => write!(format, "({} = {})", id.lexeme, value),
+            Expr::Ignore { token } => write!(format, "(ignored Token {})", token),
             // Expr::Fps { current } => write!(format, "FPS {}", current),
         }
     }
@@ -101,7 +105,7 @@ impl Expr {
                 Ok(val)
             }
             Expr::Assign { id, value } => {
-                environment.get(id.lexeme.to_owned())?;
+                // environment.get(id.lexeme.to_owned())?;
                 let value = value.eval(&mut *environment)?;
                 environment.assign(id.lexeme.to_owned(), value)?;
                 Ok(environment.get(id.lexeme.to_owned())?)
@@ -133,7 +137,8 @@ impl Expr {
                 } else {
                     return Err(AstError::InvalidOperation(lhs, operator.lexeme.clone(), rhs).into());
                 }
-            }
+            } 
+            Expr::Ignore { token: _ } => Ok(LiteralValue::Null),
             // Expr::Fps { current } => todo!(),
         }
     }
