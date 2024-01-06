@@ -533,7 +533,7 @@ mod tests {
         let mut scanner = FpsInput::new(input);
         let _tokens = scanner.scan_tokens();
 
-        println!("{:?}", _tokens);
+        // println!("{:?}", _tokens);
 
         assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
         assert_eq!(scanner.tokens[0].literal, Some(LiteralValue::Float(123.123)));

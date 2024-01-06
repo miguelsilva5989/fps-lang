@@ -12,6 +12,8 @@ enum ParserError {
     Consume(String),
     #[error("Expected expression for token: '{0}' at line {1}")]
     ExpectedExpression(String, usize),
+    #[error("Expected FPS End token '##' at the end of the file")]
+    ExpectedFpsEnd,
     #[error("Invalid variable declaration: '{0}'")]
     Declaration(String),
     #[error("Invalid assignment target")]
@@ -32,7 +34,7 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Statement>> {
+    pub fn parse(&mut self, is_repl: bool) -> Result<Vec<Statement>> {
         let mut statements: Vec<Statement> = vec![];
         let mut errors: Vec<String> = vec![];
 
@@ -44,6 +46,12 @@ impl Parser {
                     errors.push(err.to_string());
                     self.synchronize();
                 }
+            }
+        }
+
+        if !is_repl {
+            if self.previous().token_type != TokenType::FpsEnd {
+                return Err(ParserError::ExpectedFpsEnd.into())
             }
         }
 
@@ -175,7 +183,7 @@ impl Parser {
     fn assignment(&mut self) -> Result<Expr> {
         let expr = self.equality()?;
 
-        println!("expr {:?}", expr);
+        // println!("expr {:?}", expr);
 
         if self.match_token(TokenType::Equal) {
             let val = self.assignment()?;
@@ -287,7 +295,7 @@ impl Parser {
         use TokenType::*;
 
         let token = self.peek();
-        println!("{}", token);
+        // println!("{}", token);
         let result = match token.token_type {
             Number | StringLiteral | True | False | Null => {
                 self.advance();
@@ -459,7 +467,7 @@ mod tests {
         scanner.scan_tokens().expect("error scanning tokens");
 
         let mut parser = Parser::new(scanner.tokens);
-        let expression = parser.parse();
+        let expression = parser.parse(true);
 
         let expected = vec![Statement::Print(Expr::Literal {
             value: LiteralValue::Number(1.),
@@ -476,7 +484,7 @@ mod tests {
         scanner.scan_tokens().expect("error scanning tokens");
 
         let mut parser = Parser::new(scanner.tokens);
-        let expression = parser.parse();
+        let expression = parser.parse(true);
 
         let expected = vec![Statement::Declaration {
             id: Token {
@@ -502,7 +510,7 @@ mod tests {
         scanner.scan_tokens().expect("error scanning tokens");
 
         let mut parser = Parser::new(scanner.tokens);
-        let expression = parser.parse();
+        let expression = parser.parse(true);
 
         let expected = vec![
             Statement::Declaration {
@@ -542,7 +550,7 @@ mod tests {
         scanner.scan_tokens().expect("error scanning tokens");
 
         let mut parser = Parser::new(scanner.tokens);
-        let expression = parser.parse();
+        let expression = parser.parse(true);
 
         let expected = vec![
             Statement::Declaration {

@@ -19,7 +19,7 @@ struct Cli {
     repl: bool,
 }
 
-fn execute(interpreter: &mut Interpreter, input: &str) -> Result<()> {
+fn execute(interpreter: &mut Interpreter, input: &str, is_repl: bool) -> Result<()> {
     let mut scanner = FpsInput::new(input);
     scanner.scan_tokens()?;
 
@@ -27,7 +27,7 @@ fn execute(interpreter: &mut Interpreter, input: &str) -> Result<()> {
 
     let mut parser = Parser::new(scanner.tokens);
 
-    let res = parser.parse();
+    let res = parser.parse(is_repl);
     match res {
         Ok(statements) => {
             // println!("statements: {:?}", statements);
@@ -35,6 +35,8 @@ fn execute(interpreter: &mut Interpreter, input: &str) -> Result<()> {
         }
         Err(res) => println!("ERROR: {:?}", res),
     }
+
+    
 
     // for statement in statements {
 
@@ -71,14 +73,14 @@ fn run_prompt() -> Result<()> {
             break;
         }
 
-        execute(&mut interpreter, &buffer)?;
+        execute(&mut interpreter, &buffer, true)?;
     }
     Ok(())
 }
 
 fn run_file(input: &str) -> Result<()> {
     let mut interpreter: Interpreter = Interpreter::new();
-    execute(&mut interpreter, input)?;
+    execute(&mut interpreter, input, false)?;
 
     // todo!("fix line POS and multiline processing");
 

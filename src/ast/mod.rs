@@ -4,6 +4,7 @@ pub mod expr;
 pub mod literal;
 pub mod statement;
 pub mod environment;
+pub mod fps;
 
 use crate::lexer::{self, Token, TokenType};
 use literal::LiteralValue;

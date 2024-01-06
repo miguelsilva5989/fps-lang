@@ -126,7 +126,7 @@ fn unwrap_as_string(literal: Option<lexer::LiteralValue>) -> Result<String> {
 }
 
 fn unwrap_as_f64(literal: Option<lexer::LiteralValue>) -> Result<f64> {
-    println!("{:?}", literal);
+    // println!("{:?}", literal);
     match literal {
         Some(lexer::LiteralValue::Float(s)) => Ok(s),
         _ => return Err(AstError::UnwrapFloat(literal).into()),
