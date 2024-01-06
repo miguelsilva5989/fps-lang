@@ -5,7 +5,7 @@ use super::AstError;
 use super::{environment::Environment, literal::LiteralValue};
 use crate::lexer::{Token, TokenType};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,
@@ -32,9 +32,9 @@ pub enum Expr {
     Ignore {
         token: Token,
     },
-    Fps {
-        count: f64,
-    },
+    // Fps {
+    //     count: f64,
+    // },
 }
 
 impl Display for Expr {
@@ -47,7 +47,7 @@ impl Display for Expr {
             Expr::Variable { id } => write!(format, "(var {})", id.lexeme),
             Expr::Assign { id, value } => write!(format, "({} = {})", id.lexeme, value),
             Expr::Ignore { token } => write!(format, "(ignored Token {})", token),
-            Expr::Fps { count } => write!(format, "FPS count {}", count),
+            // Expr::Fps { count } => write!(format, "FPS count {}", count),
         }
     }
 }
@@ -139,7 +139,7 @@ impl Expr {
                 }
             } 
             Expr::Ignore { token: _ } => Ok(LiteralValue::Null),
-            Expr::Fps { count } => Ok(LiteralValue::Number(*count)),
+            // Expr::Fps { count } => Ok(LiteralValue::Number(*count)),
         }
     }
 }

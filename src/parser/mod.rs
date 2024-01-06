@@ -106,9 +106,13 @@ impl Parser {
                 self.advance();
                 Ok(Statement::Comment(self.previous()))
             }
-            Fps | FpsEnd => {
+            Fps => {
                 self.advance();
                 Ok(Statement::Fps(self.previous()))
+            }
+            FpsEnd => {
+                self.advance();
+                Ok(Statement::FpsEnd(self.previous()))
             }
             Print => {
                 self.advance();
