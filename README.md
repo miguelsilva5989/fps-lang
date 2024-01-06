@@ -18,14 +18,14 @@ let a=1; # a; ## <- exit program on last frame
 |        |_frame 1
 frame 0
 ```
-
+<!-- 
 This will **not work** as the variable 'a' assignment was requested on frame 0.
 We need to wait as time progresses to interact with actions that are requested at a particular frame.
 ```
-# let a=1; a; ##
+# let a=1; print(a); ##
            ^
            |
-```
+``` -->
 
 ### Syntax
 

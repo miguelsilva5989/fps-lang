@@ -34,7 +34,7 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self, is_repl: bool) -> Result<Vec<Statement>> {
+    pub fn parse(&mut self) -> Result<Vec<Statement>> {
         let mut statements: Vec<Statement> = vec![];
         let mut errors: Vec<String> = vec![];
 
@@ -49,10 +49,8 @@ impl Parser {
             }
         }
 
-        if !is_repl {
-            if self.previous().token_type != TokenType::FpsEnd {
-                return Err(ParserError::ExpectedFpsEnd.into())
-            }
+        if self.previous().token_type != TokenType::FpsEnd {
+            return Err(ParserError::ExpectedFpsEnd.into());
         }
 
         if errors.len() > 0 {
@@ -462,16 +460,25 @@ mod tests {
     #[test]
     fn test_print_statement() {
         use crate::ast::expr::*;
-        let input = "print(1);";
+        let input = "print(1); ##";
         let mut scanner = FpsInput::new(input);
         scanner.scan_tokens().expect("error scanning tokens");
 
         let mut parser = Parser::new(scanner.tokens);
-        let expression = parser.parse(true);
+        let expression = parser.parse();
 
-        let expected = vec![Statement::Print(Expr::Literal {
-            value: LiteralValue::Number(1.),
-        })];
+        let expected = vec![
+            Statement::Print(Expr::Literal {
+                value: LiteralValue::Number(1.),
+            }),
+            Statement::FpsEnd(Token {
+                token_type: FpsEnd,
+                lexeme: "##".to_owned(),
+                literal: None,
+                line: 1,
+                pos: 12,
+            }),
+        ];
 
         assert_eq!(expression.unwrap(), expected)
     }
@@ -479,25 +486,34 @@ mod tests {
     #[test]
     fn declaration() {
         use crate::ast::expr::*;
-        let input = "let a = 1.;";
+        let input = "let a = 1.; ##";
         let mut scanner = FpsInput::new(input);
         scanner.scan_tokens().expect("error scanning tokens");
 
         let mut parser = Parser::new(scanner.tokens);
-        let expression = parser.parse(true);
+        let expression = parser.parse();
 
-        let expected = vec![Statement::Declaration {
-            id: Token {
-                token_type: Identifer,
-                lexeme: "a".to_owned(),
-                literal: Some(Identifier("a".to_owned())),
+        let expected = vec![
+            Statement::Declaration {
+                id: Token {
+                    token_type: Identifer,
+                    lexeme: "a".to_owned(),
+                    literal: Some(Identifier("a".to_owned())),
+                    line: 1,
+                    pos: 5,
+                },
+                expr: Expr::Literal {
+                    value: LiteralValue::Number(1.),
+                },
+            },
+            Statement::FpsEnd(Token {
+                token_type: FpsEnd,
+                lexeme: "##".to_owned(),
+                literal: None,
                 line: 1,
-                pos: 5,
-            },
-            expr: Expr::Literal {
-                value: LiteralValue::Number(1.),
-            },
-        }];
+                pos: 14,
+            }),
+        ];
 
         assert_eq!(expression.unwrap(), expected)
     }
@@ -505,12 +521,12 @@ mod tests {
     #[test]
     fn declaration_assign() {
         use crate::ast::expr::*;
-        let input = "let a = 1;a = 2;";
+        let input = "let a = 1;a = 2; ##";
         let mut scanner = FpsInput::new(input);
         scanner.scan_tokens().expect("error scanning tokens");
 
         let mut parser = Parser::new(scanner.tokens);
-        let expression = parser.parse(true);
+        let expression = parser.parse();
 
         let expected = vec![
             Statement::Declaration {
@@ -537,6 +553,13 @@ mod tests {
                     value: LiteralValue::Number(2.),
                 }),
             }),
+            Statement::FpsEnd(Token {
+                token_type: FpsEnd,
+                lexeme: "##".to_owned(),
+                literal: None,
+                line: 1,
+                pos: 19,
+            }),
         ];
 
         assert_eq!(expression.unwrap(), expected)
@@ -545,12 +568,12 @@ mod tests {
     #[test]
     fn declaration_print() {
         use crate::ast::expr::*;
-        let input = "let a = 1;print(a);";
+        let input = "let a = 1;print(a); ##";
         let mut scanner = FpsInput::new(input);
         scanner.scan_tokens().expect("error scanning tokens");
 
         let mut parser = Parser::new(scanner.tokens);
-        let expression = parser.parse(true);
+        let expression = parser.parse();
 
         let expected = vec![
             Statement::Declaration {
@@ -573,6 +596,13 @@ mod tests {
                     line: 1,
                     pos: 17,
                 },
+            }),
+            Statement::FpsEnd(Token {
+                token_type: FpsEnd,
+                lexeme: "##".to_owned(),
+                literal: None,
+                line: 1,
+                pos: 22,
             }),
         ];
 

@@ -1,3 +1,4 @@
+use std::str;
 use anyhow::Result;
 use clap::Parser as ClapParser;
 use std::io::{stdin, stdout, Write};
@@ -19,7 +20,9 @@ struct Cli {
     repl: bool,
 }
 
-fn execute(interpreter: &mut Interpreter, input: &str, is_repl: bool) -> Result<()> {
+fn execute(interpreter: &mut Interpreter, input: &str) -> Result<()> {
+    let mut stdout = Vec::new();
+    
     let mut scanner = FpsInput::new(input);
     scanner.scan_tokens()?;
 
@@ -27,14 +30,20 @@ fn execute(interpreter: &mut Interpreter, input: &str, is_repl: bool) -> Result<
 
     let mut parser = Parser::new(scanner.tokens);
 
-    let res = parser.parse(is_repl);
+    let res = parser.parse();
     match res {
         Ok(statements) => {
             // println!("statements: {:?}", statements);
-            interpreter.interpret(statements)?;
+            interpreter.interpret(&mut stdout, statements)?;
         }
         Err(res) => println!("ERROR: {:?}", res),
     }
+
+    match str::from_utf8(&stdout) {
+        Ok(val) => println!("{}", val),
+        Err(err) => panic!("{}", err.to_string())
+    }
+    
 
     
 
@@ -73,14 +82,14 @@ fn run_prompt() -> Result<()> {
             break;
         }
 
-        execute(&mut interpreter, &buffer, true)?;
+        execute(&mut interpreter, &buffer)?;
     }
     Ok(())
 }
 
 fn run_file(input: &str) -> Result<()> {
     let mut interpreter: Interpreter = Interpreter::new();
-    execute(&mut interpreter, input, false)?;
+    execute(&mut interpreter, input)?;
 
     // todo!("fix line POS and multiline processing");
 
