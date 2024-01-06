@@ -12,6 +12,12 @@ enum AstError {
     NotDeclared(String),
 }
 
+// #[derive(Debug)]
+// pub struct Variable {
+//     // pub fps: Fps,
+//     pub value: LiteralValue,
+// }
+
 #[derive(Debug, Clone)]
 pub struct Environment {
     pub parent: Option<Rc<Environment>>,

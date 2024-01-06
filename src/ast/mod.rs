@@ -13,6 +13,8 @@ enum AstError {
     #[error("Could not unwrap Lexer Literal Value as a String: {0:?}")]
     UnwrapString(Option<lexer::LiteralValue>),
     #[error("Could not unwrap Lexer Literal Value as an f64: {0:?}")]
+    UnwrapFloat(Option<lexer::LiteralValue>),
+    #[error("Could not unwrap Lexer Literal Value as an usize: {0:?}")]
     UnwrapInt(Option<lexer::LiteralValue>),
     #[error("Could not create literal value from token: {0:?}")]
     LiteralValueCreate(Token),

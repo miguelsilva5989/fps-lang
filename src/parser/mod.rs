@@ -148,8 +148,9 @@ impl Parser {
     fn assignment(&mut self) -> Result<Expr> {
         let expr = self.equality()?;
 
+        println!("expr {:?}", expr);
+
         if self.match_token(TokenType::Equal) {
-            let _equals = self.previous();
             let val = self.assignment()?;
 
             match expr {
@@ -166,7 +167,7 @@ impl Parser {
     }
 
     fn check_next_token(&mut self, tt: TokenType) -> bool {
-        self.peek().token_type == TokenType::CloseBrace
+        self.peek().token_type == tt
     }
 
     fn match_token(&mut self, tt: TokenType) -> bool {
@@ -259,6 +260,7 @@ impl Parser {
         use TokenType::*;
 
         let token = self.peek();
+        println!("{}", token);
         let result = match token.token_type {
             Number | StringLiteral | True | False | Null => {
                 self.advance();
@@ -278,7 +280,7 @@ impl Parser {
                 Ok(Expr::Variable { id })
             }
             Fps => Ok(Expr::Literal {
-                value: LiteralValue::Number(token.fps as f64),
+                value: LiteralValue::from_token(token)?,
             }),
             FpsEnd => Ok(Expr::Literal { value: LiteralValue::Null }),
             Comment => Ok(Expr::Ignore { token: token }),
@@ -378,7 +380,7 @@ mod tests {
 
     macro_rules! token {
         ($token_type: expr, $lexeme: expr, $literal: expr) => {
-            Token::new($token_type, $lexeme.into(), $literal, 0, 0, 0)
+            Token::new($token_type, $lexeme.into(), $literal, 0, 0)
         };
     }
 
@@ -386,9 +388,9 @@ mod tests {
     fn test_addition() {
         //4+20;
         let input = vec![
-            token!(Number, "4", Some(Float(4.))),
+            token!(Number, "4.", Some(Float(4.))),
             token!(Plus, "+", None),
-            token!(Number, "20", Some(Float(20.))),
+            token!(Number, "20", Some(Int(20))),
             token!(Semicolon, ";", None),
         ];
 
@@ -433,7 +435,7 @@ mod tests {
         let expression = parser.parse();
 
         let expected = vec![Statement::Print(Expr::Literal {
-            value: LiteralValue::Number(1.),
+            value: LiteralValue::Int(1),
         })];
 
         assert_eq!(expression.unwrap(), expected)
@@ -442,7 +444,7 @@ mod tests {
     #[test]
     fn declaration() {
         use crate::ast::expr::*;
-        let input = "let a = 1;";
+        let input = "let a = 1.;";
         let mut scanner = FpsInput::new(input);
         scanner.scan_tokens().expect("error scanning tokens");
 
@@ -456,12 +458,48 @@ mod tests {
                 literal: Some(Identifier("a".to_owned())),
                 line: 1,
                 pos: 5,
-                fps: 0,
             },
             expr: Expr::Literal {
                 value: LiteralValue::Number(1.),
             },
         }];
+
+        assert_eq!(expression.unwrap(), expected)
+    }
+
+    #[test]
+    fn declaration_assign() {
+        use crate::ast::expr::*;
+        let input = "let a = 1;a = 2;";
+        let mut scanner = FpsInput::new(input);
+        scanner.scan_tokens().expect("error scanning tokens");
+
+        let mut parser = Parser::new(scanner.tokens);
+        let expression = parser.parse();
+
+        let expected = vec![
+            Statement::Declaration {
+                id: Token {
+                    token_type: Identifer,
+                    lexeme: "a".to_owned(),
+                    literal: Some(Identifier("a".to_owned())),
+                    line: 1,
+                    pos: 5,
+                },
+                expr: Expr::Literal {
+                    value: LiteralValue::Int(1),
+                },
+            },
+            Statement::Print(Expr::Variable {
+                id: Token {
+                    token_type: Identifer,
+                    lexeme: "a".to_owned(),
+                    literal: Some(Identifier("a".to_owned())),
+                    line: 1,
+                    pos: 17,
+                },
+            }),
+        ];
 
         assert_eq!(expression.unwrap(), expected)
     }
@@ -484,10 +522,9 @@ mod tests {
                     literal: Some(Identifier("a".to_owned())),
                     line: 1,
                     pos: 5,
-                    fps: 0,
                 },
                 expr: Expr::Literal {
-                    value: LiteralValue::Number(1.),
+                    value: LiteralValue::Int(1),
                 },
             },
             Statement::Print(Expr::Variable {
@@ -497,7 +534,6 @@ mod tests {
                     literal: Some(Identifier("a".to_owned())),
                     line: 1,
                     pos: 17,
-                    fps: 0,
                 },
             }),
         ];

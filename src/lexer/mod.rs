@@ -82,8 +82,8 @@ pub enum TokenType {
 
 #[derive(Debug, Clone, PartialEq, Display)]
 pub enum LiteralValue {
+    Int(usize),
     Float(f64),
-    // Float(f64),
     StringValue(String),
     Identifier(String),
     Keyword(String),
@@ -97,7 +97,7 @@ pub struct Token {
     pub literal: Option<LiteralValue>,
     pub line: usize,
     pub pos: usize,
-    pub fps: usize,
+    // pub fps: usize,
 }
 
 impl Display for Token {
@@ -105,27 +105,27 @@ impl Display for Token {
         match &self.literal {
             Some(literal) => write!(
                 format,
-                "{} {} {} line {} pos {} fps {}",
-                self.token_type, self.lexeme, literal, self.line, self.pos, self.fps
+                "{} {} {} line {} pos {}",
+                self.token_type, self.lexeme, literal, self.line, self.pos
             ),
             None => write!(
                 format,
-                "{} {} None line {} pos {} fps {}",
-                self.token_type, self.lexeme, self.line, self.pos, self.fps
+                "{} {} None line {} pos {}",
+                self.token_type, self.lexeme, self.line, self.pos
             ),
         }
     }
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, lexeme: String, literal: Option<LiteralValue>, line: usize, pos: usize, fps: usize) -> Self {
+    pub fn new(token_type: TokenType, lexeme: String, literal: Option<LiteralValue>, line: usize, pos: usize) -> Self {
         Self {
             token_type,
             lexeme,
             literal,
             line,
             pos,
-            fps,
+            // fps,
         }
     }
 }
@@ -136,7 +136,7 @@ pub struct FpsInput<'a> {
     start: usize,
     current: usize,
     line: usize,
-    current_fps: usize,
+    // current_fps: usize,
 }
 
 impl Display for FpsInput<'_> {
@@ -150,8 +150,8 @@ impl Display for FpsInput<'_> {
 }
 
 macro_rules! token {
-    ($token_type: expr, $lexeme: expr, $literal: expr, $line: expr, $pos: expr, $fps: expr) => {
-        Token::new($token_type, $lexeme, $literal, $line, $pos, $fps)
+    ($token_type: expr, $lexeme: expr, $literal: expr, $line: expr, $pos: expr) => {
+        Token::new($token_type, $lexeme, $literal, $line, $pos)
     };
 }
 
@@ -163,7 +163,7 @@ impl<'a> FpsInput<'a> {
             start: 0,
             current: 0,
             line: 1,
-            current_fps: 0,
+            // current_fps: 0,
         }
     }
 
@@ -172,7 +172,7 @@ impl<'a> FpsInput<'a> {
     }
 
     fn create_token(&self, token_type: TokenType, lexeme: String, literal: Option<LiteralValue>) -> Token {
-        token!(token_type, lexeme, literal, self.line, self.current, self.current_fps)
+        token!(token_type, lexeme, literal, self.line, self.current)
     }
 
     pub fn scan_tokens(&mut self) -> Result<()> {
@@ -253,6 +253,28 @@ impl<'a> FpsInput<'a> {
         self.consume_until(vec!['\n', '\r'])
     }
 
+    fn consume_fps(&mut self) -> Result<String> {
+        let mut consumed = "#".to_owned();
+
+        loop {
+            match self.peek() {
+                Ok(is_next) => {
+                    if let Some(next) = is_next {
+                        if next.is_digit(10) {
+                            consumed.push_str(next.to_string().as_str());
+                            self.current += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                Err(_) => (),
+            }
+        }
+
+        Ok(consumed)
+    }
+
     fn consume_string(&mut self) -> Result<String> {
         let consumed = self.consume_until(vec!['"']);
         self.current += 1;
@@ -268,7 +290,17 @@ impl<'a> FpsInput<'a> {
                         if next.is_digit(10) {
                             consumed.push_str(next.to_string().as_str());
                             self.current += 1;
-                        } else {
+                        } else if self.is_next_char_match('.') {
+                            // check if consumed already has more dots??
+                            if consumed.contains(".") {
+                                break
+                            }
+
+                            consumed.push_str(next.to_string().as_str());
+                            self.current += 1;
+                            consumed += self.consume_number().as_str();
+                        } 
+                        else {
                             break;
                         }
                     } else {
@@ -337,12 +369,18 @@ impl<'a> FpsInput<'a> {
                 '}' => self.create_token(CloseBrace, ch.into(), None),
                 // single or double char
                 '#' => {
-                    self.current_fps += 1;
+                    // self.current_fps += 1;
                     if self.is_next_char_match('#') {
                         self.current += 1;
                         self.create_token(FpsEnd, "##".to_owned(), None)
                     } else {
-                        self.create_token(Fps, ch.into(), Some(LiteralValue::Fps(self.current_fps)))
+                        let fps = self.consume_fps()?;
+                        if fps.len() > 1 {
+                            let fps_count = fps.replace("#", "").parse::<usize>().unwrap();
+                            self.create_token(Fps, format!("#{}", fps_count), Some(LiteralValue::Fps(fps_count)))
+                        } else {
+                            self.create_token(Fps, ch.into(), Some(LiteralValue::Fps(1)))
+                        }
                     }
                 }
                 '=' => {
@@ -390,15 +428,16 @@ impl<'a> FpsInput<'a> {
                 _ => {
                     if ch.is_digit(10) {
                         let mut num: String = ch.into();
-                        // support multiple FPS
-                        if self.is_next_char_match('#') {
-                            self.current += 1;
-                            self.current_fps += num.parse::<usize>().unwrap();
-                            self.create_token(Fps, format!("{}#", self.current_fps), Some(LiteralValue::Fps(self.current_fps)))
-                        } else {
-                            num.push_str(self.consume_number().as_str());
 
+                        num.push_str(self.consume_number().as_str());
+
+                        println!("{num}");
+                        println!("{:?}", self.peek());
+
+                        if num.contains(".") {
                             self.create_token(Number, num.clone(), Some(LiteralValue::Float(num.parse::<f64>().unwrap())))
+                        } else {
+                            self.create_token(Number, num.clone(), Some(LiteralValue::Int(num.parse::<usize>().unwrap())))
                         }
                     } else if ch.is_alphabetic() {
                         let mut id: String = ch.into();
@@ -446,13 +485,13 @@ mod tests {
 
     #[test]
     fn two_char_tokens() {
-        let input = "== != >= <=";
-        let expected = vec![EqualEqual, BangEqual, GreaterEqual, LessEqual, Eof];
+        let input = "#10 == != >= <=";
+        let expected = vec![Fps, EqualEqual, BangEqual, GreaterEqual, LessEqual, Eof];
 
         let mut scanner = FpsInput::new(input);
         let _ = scanner.scan_tokens();
 
-        assert_eq!(scanner.tokens.len(), 5); //Eof counts as a Token
+        assert_eq!(scanner.tokens.len(), 6); //Eof counts as a Token
         assert_eq!(
             scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
             expected
@@ -496,14 +535,16 @@ mod tests {
 
     #[test]
     fn numeric_literal() {
-        let input = "123";
+        let input = "123.123";
         let expected = vec![Number, Eof];
 
         let mut scanner = FpsInput::new(input);
-        let _ = scanner.scan_tokens();
+        let _tokens = scanner.scan_tokens();
+
+        println!("{:?}", _tokens);
 
         assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
-        assert_eq!(scanner.tokens[0].literal, Some(LiteralValue::Float(123.)));
+        assert_eq!(scanner.tokens[0].literal, Some(LiteralValue::Float(123.123)));
         assert_eq!(
             scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
             expected

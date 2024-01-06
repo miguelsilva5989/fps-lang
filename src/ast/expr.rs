@@ -32,9 +32,9 @@ pub enum Expr {
     Ignore {
         token: Token,
     },
-    // Fps {
-    //     current: usize,
-    // },
+    Fps {
+        count: usize,
+    },
 }
 
 impl Display for Expr {
@@ -47,7 +47,7 @@ impl Display for Expr {
             Expr::Variable { id } => write!(format, "(var {})", id.lexeme),
             Expr::Assign { id, value } => write!(format, "({} = {})", id.lexeme, value),
             Expr::Ignore { token } => write!(format, "(ignored Token {})", token),
-            // Expr::Fps { current } => write!(format, "FPS {}", current),
+            Expr::Fps { count } => write!(format, "FPS count {}", count),
         }
     }
 }
@@ -139,7 +139,7 @@ impl Expr {
                 }
             } 
             Expr::Ignore { token: _ } => Ok(LiteralValue::Null),
-            // Expr::Fps { current } => todo!(),
+            Expr::Fps { count } => Ok(LiteralValue::Int(*count)),
         }
     }
 }
@@ -154,7 +154,7 @@ mod tests {
     fn pretty_print_ast() {
         use Expr::*;
 
-        let minus_token = Token::new(TokenType::Minus, "-".to_string(), None, 0, 0, 0);
+        let minus_token = Token::new(TokenType::Minus, "-".to_string(), None, 0, 0);
         let num = Literal {
             value: LiteralValue::Number(123.),
         };
@@ -164,7 +164,7 @@ mod tests {
                 value: LiteralValue::Number(45.),
             }),
         };
-        let multi = Token::new(TokenType::Star, "*".to_string(), None, 0, 0, 0);
+        let multi = Token::new(TokenType::Star, "*".to_string(), None, 0, 0);
 
         let ast = Binary {
             left: Box::new(Unary {
