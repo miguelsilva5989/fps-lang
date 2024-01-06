@@ -33,7 +33,7 @@ pub enum Expr {
         token: Token,
     },
     Fps {
-        count: usize,
+        count: f64,
     },
 }
 
@@ -139,7 +139,7 @@ impl Expr {
                 }
             } 
             Expr::Ignore { token: _ } => Ok(LiteralValue::Null),
-            Expr::Fps { count } => Ok(LiteralValue::Int(*count)),
+            Expr::Fps { count } => Ok(LiteralValue::Number(*count)),
         }
     }
 }

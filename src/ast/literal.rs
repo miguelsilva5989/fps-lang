@@ -7,7 +7,6 @@ use crate::lexer::{self, Token, TokenType};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum LiteralValue {
-    Int(usize),
     Number(f64),
     StringValue(String),
     Boolean(bool),
@@ -17,7 +16,6 @@ pub enum LiteralValue {
 impl Display for LiteralValue {
     fn fmt(&self, format: &mut Formatter) -> fmt::Result {
         match self {
-            LiteralValue::Int(val) => write!(format, "{}", val.to_string()),
             LiteralValue::Number(val) => write!(format, "{}", val.to_string()),
             LiteralValue::StringValue(val) => write!(format, "{}", val),
             LiteralValue::Boolean(val) => match val {
@@ -89,13 +87,7 @@ impl LiteralValue {
         use TokenType::*;
         match token.token_type {
             StringLiteral => Ok(Self::StringValue(unwrap_as_string(token.literal)?)),
-            Number => {
-                if token.lexeme.contains(".") {
-                    Ok(Self::Number(unwrap_as_f64(token.literal)?))
-                } else {
-                    Ok(Self::Int(unwrap_as_usize(token.literal)?))
-                }
-            }
+            Number => Ok(Self::Number(unwrap_as_f64(token.literal)?)),
             True => Ok(Self::Boolean(true)),
             False => Ok(Self::Boolean(false)),
             _ => return Err(AstError::LiteralValueCreate(token).into()),
@@ -105,13 +97,6 @@ impl LiteralValue {
     pub fn is_falsy(&self) -> LiteralValue {
         use LiteralValue::*;
         match self {
-            Int(num) => {
-                if *num == 0 {
-                    LiteralValue::Boolean(false)
-                } else {
-                    LiteralValue::Boolean(true)
-                }
-            }
             Number(num) => {
                 if *num == 0. {
                     LiteralValue::Boolean(false)
@@ -141,15 +126,16 @@ fn unwrap_as_string(literal: Option<lexer::LiteralValue>) -> Result<String> {
 }
 
 fn unwrap_as_f64(literal: Option<lexer::LiteralValue>) -> Result<f64> {
+    println!("{:?}", literal);
     match literal {
         Some(lexer::LiteralValue::Float(s)) => Ok(s),
         _ => return Err(AstError::UnwrapFloat(literal).into()),
     }
 }
 
-fn unwrap_as_usize(literal: Option<lexer::LiteralValue>) -> Result<usize> {
-    match literal {
-        Some(lexer::LiteralValue::Int(s)) => Ok(s),
-        _ => return Err(AstError::UnwrapInt(literal).into()),
-    }
-}
+// fn unwrap_as_usize(literal: Option<lexer::LiteralValue>) -> Result<usize> {
+//     match literal {
+//         Some(lexer::LiteralValue::Float(s)) => Ok(s),
+//         _ => return Err(AstError::UnwrapInt(literal).into()),
+//     }
+// }

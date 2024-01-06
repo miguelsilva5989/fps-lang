@@ -90,11 +90,34 @@ impl Parser {
 
     fn statement(&mut self) -> Result<Statement> {
         use TokenType::*;
-        match self.advance().token_type {
-            Comment => Ok(Statement::Comment(self.previous())),
-            Fps | FpsEnd => Ok(Statement::Fps(self.previous())),
-            Print => self.print_statement(),
-            OpenBrace => self.block_statement(),
+
+        // if self.match_token(Print) {
+        //     self.print_statement()
+        // }else if self.match_token(OpenBrace) {
+        //     self.block_statement()
+        // } else if self.match_tokens(vec![Fps, FpsEnd]) {
+        //     Ok(Statement::Fps(self.previous()))
+        // } else {
+        //     self.expression_statement()
+        // }
+
+        match self.peek().token_type {
+            Comment => {
+                self.advance();
+                Ok(Statement::Comment(self.previous()))
+            }
+            Fps | FpsEnd => {
+                self.advance();
+                Ok(Statement::Fps(self.previous()))
+            }
+            Print => {
+                self.advance();
+                self.print_statement()
+            }
+            OpenBrace => {
+                self.advance();
+                self.block_statement()
+            }
             _ => self.expression_statement(),
         }
     }
@@ -390,7 +413,7 @@ mod tests {
         let input = vec![
             token!(Number, "4.", Some(Float(4.))),
             token!(Plus, "+", None),
-            token!(Number, "20", Some(Int(20))),
+            token!(Number, "20", Some(Float(20.))),
             token!(Semicolon, ";", None),
         ];
 
@@ -435,7 +458,7 @@ mod tests {
         let expression = parser.parse();
 
         let expected = vec![Statement::Print(Expr::Literal {
-            value: LiteralValue::Int(1),
+            value: LiteralValue::Number(1.),
         })];
 
         assert_eq!(expression.unwrap(), expected)
@@ -487,17 +510,20 @@ mod tests {
                     pos: 5,
                 },
                 expr: Expr::Literal {
-                    value: LiteralValue::Int(1),
+                    value: LiteralValue::Number(1.),
                 },
             },
-            Statement::Print(Expr::Variable {
+            Statement::ArithmeticExpr(Expr::Assign {
                 id: Token {
                     token_type: Identifer,
-                    lexeme: "a".to_owned(),
-                    literal: Some(Identifier("a".to_owned())),
+                    lexeme: "a".to_string(),
+                    literal: Some(Identifier("a".to_string())),
                     line: 1,
-                    pos: 17,
+                    pos: 11,
                 },
+                value: Box::from(Expr::Literal {
+                    value: LiteralValue::Number(2.),
+                }),
             }),
         ];
 
@@ -524,7 +550,7 @@ mod tests {
                     pos: 5,
                 },
                 expr: Expr::Literal {
-                    value: LiteralValue::Int(1),
+                    value: LiteralValue::Number(1.),
                 },
             },
             Statement::Print(Expr::Variable {

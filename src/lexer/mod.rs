@@ -82,7 +82,6 @@ pub enum TokenType {
 
 #[derive(Debug, Clone, PartialEq, Display)]
 pub enum LiteralValue {
-    Int(usize),
     Float(f64),
     StringValue(String),
     Identifier(String),
@@ -431,14 +430,7 @@ impl<'a> FpsInput<'a> {
 
                         num.push_str(self.consume_number().as_str());
 
-                        println!("{num}");
-                        println!("{:?}", self.peek());
-
-                        if num.contains(".") {
-                            self.create_token(Number, num.clone(), Some(LiteralValue::Float(num.parse::<f64>().unwrap())))
-                        } else {
-                            self.create_token(Number, num.clone(), Some(LiteralValue::Int(num.parse::<usize>().unwrap())))
-                        }
+                        self.create_token(Number, num.clone(), Some(LiteralValue::Float(num.parse::<f64>().unwrap())))
                     } else if ch.is_alphabetic() {
                         let mut id: String = ch.into();
                         id.push_str(self.consume_identifier().as_str());
