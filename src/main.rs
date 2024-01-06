@@ -23,7 +23,7 @@ fn execute(interpreter: &mut Interpreter, input: &str, is_repl: bool) -> Result<
     let mut scanner = FpsInput::new(input);
     scanner.scan_tokens()?;
 
-    println!("{}", scanner);
+    // println!("{}", scanner);
 
     let mut parser = Parser::new(scanner.tokens);
 

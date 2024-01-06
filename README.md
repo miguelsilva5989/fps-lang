@@ -13,9 +13,9 @@ This is based on the book [Crafting Interpreters](https://craftinginterpreters.c
 \# represents a frame
 
 ```
-# let a=1; # a; ## <- exit program on last frame
-^       ^
-|       |_frame 1
+let a=1; # a; ## <- exit program on last frame
+^        ^
+|        |_frame 1
 frame 0
 ```
 
@@ -23,17 +23,17 @@ This will **not work** as the variable 'a' assignment was requested on frame 0.
 We need to wait as time progresses to interact with actions that are requested at a particular frame.
 ```
 # let a=1; a; ##
-        ^
-        |
+           ^
+           |
 ```
 
 ### Syntax
 
-| Syntax                    | Description           | Example                       |
-| ------------------------- | --------------------- | ----------------------------- |
-| let id=\<val>;            | variable desclaration | # a let = 0; ##               |
-| #2                        | 2 frames              | #2 print("hello\n"); ##       |
-| for 0..2 { <statements> } | for loop              | # for 0..2 { println(it);} ## |
+| Syntax                    | Description                                                                 | Example                       |
+| ------------------------- | --------------------------------------------------------------------------- | ----------------------------- |
+| let id=\<val>;            | variable desclaration                                                       | # a let = 0; ##               |
+| #2                        | the next frame block is 2 and all statements in it will be executed 2 times | #2 print("hello\n"); ##       |
+| for 0..2 { <statements> } | for loop                                                                    | # for 0..2 { println(it);} ## |
 
 #### Example outputs
 
@@ -47,7 +47,7 @@ hello
 ```
 
 ```
-let a= 0; #5 a+=1; println(a); ##
+let a= 0; #5 a = a + 1; print(a); ##
 
 output:
 1
@@ -60,7 +60,7 @@ output:
 ##### For loop
 
 ```
-for 0..=2 { println(it); } ##
+for 0..=2 { print(it); } ##
 
 output:
 0
