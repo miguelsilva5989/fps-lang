@@ -1,12 +1,16 @@
 # FPS Lang
 
-A `frames per second` meme programming language 🙃
+A `frames per second` meme programming language 🙃 written in `Rust`
 
 The concept of this language is to execute statements on a `per frame` level
 
-This lexing/parsing concept is based on the book [Crafting Interpreters](https://craftinginterpreters.com/)
+The lexing/parsing concept is based on the book [Crafting Interpreters](https://craftinginterpreters.com/)
 
 The weird `FPS` part was just a silly idea I had when thinking about `frames per second` in video games 🙃
+
+All lexing and parsing was initally developed completelly manual without using any third-party libraries. I might change this in the future.
+
+Currently I'm not using any lifetimes or Arc/Rc/RefCell as I was too deep into development when I wanted to make this change. I might be adding this in the future in order to remove all those **ugly** `.clone()` 👌
 
 ## Logic
 
