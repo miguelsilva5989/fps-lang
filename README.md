@@ -2,9 +2,9 @@
 
 A `frames per second` meme programming language 🙃
 
-The concept of this language is to execute statements on a `per frame` level.
+The concept of this language is to execute statements on a `per frame` level
 
-This lexing/parsing concept is based on the book [Crafting Interpreters](https://craftinginterpreters.com/).
+This lexing/parsing concept is based on the book [Crafting Interpreters](https://craftinginterpreters.com/)
 
 The weird `FPS` part was just a silly idea I had when thinking about `frames per second` in video games 🙃
 
@@ -23,7 +23,7 @@ frame 0 -> 'let a = 1;' will be executed on frame 1
 
 ### Weird example
 
-And there is where FPS Lang shines at being weird 🤣
+And this is where `FPS Lang` shines at being `weird` 🤣
 
 ```rust
 // this is FRAME 0
@@ -117,13 +117,13 @@ let a = 0;
 
 #### Range
 
-Use `..` surround by 2 digits to define a `Range`.
+Use `..` surround by 2 digits to define a `Range`
 
-A `Range` is bound inclusively below and exclusively above.
+- `Range` is bound inclusively below and exclusively above
 
 Ranges can also be `RangeEqual` by adding a `=` sign to the range `0..=1`
 
-A `RangeEqual` is bound inclusively below and inclusively above.
+- `RangeEqual` is bound inclusively below and inclusively above.
 
 #### For loop
 
@@ -164,4 +164,3 @@ output
 ```rust
 FPS 1 -> 2
 ```
-
