@@ -128,6 +128,10 @@ impl Parser {
                 self.advance();
                 self.block_statement()
             }
+            If => {
+                self.advance();
+                self.if_statement()
+            }
             _ => self.expression_statement(),
         }
     }
@@ -155,6 +159,23 @@ impl Parser {
         self.consume(TokenType::CloseBrace, "Expected '}' after block")?;
 
         Ok(Statement::Block { statements })
+    }
+
+    fn if_statement(&mut self) -> Result<Statement> {
+        let expr = self.expression()?;
+
+        let then_block = self.statement()?;
+        
+        let mut else_block = None;
+        if self.match_token(TokenType::Else) {
+            else_block = Some(Box::new(self.statement()?));
+        }
+
+        Ok(Statement::If {
+            condition: expr,
+            then_block: Box::new(then_block),
+            else_block: else_block,
+        })
     }
 
     fn expression_statement(&mut self) -> Result<Statement> {

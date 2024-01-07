@@ -94,14 +94,14 @@ impl LiteralValue {
         }
     }
 
-    pub fn is_falsy(&self) -> LiteralValue {
+    pub fn is_false(&self) -> LiteralValue {
         use LiteralValue::*;
         match self {
             Number(num) => {
                 if *num == 0. {
-                    LiteralValue::Boolean(false)
-                } else {
                     LiteralValue::Boolean(true)
+                } else {
+                    LiteralValue::Boolean(false)
                 }
             }
             StringValue(val) => {
@@ -113,6 +113,28 @@ impl LiteralValue {
             }
             Boolean(val) => LiteralValue::Boolean(!*val),
             Null => LiteralValue::Boolean(true),
+        }
+    }
+
+    pub fn is_true(&self) -> LiteralValue {
+        use LiteralValue::*;
+        match self {
+            Number(num) => {
+                if *num == 0. {
+                    LiteralValue::Boolean(false)
+                } else {
+                    LiteralValue::Boolean(true)
+                }
+            }
+            StringValue(val) => {
+                if val.len() == 0 {
+                    LiteralValue::Boolean(false)
+                } else {
+                    LiteralValue::Boolean(true)
+                }
+            }
+            Boolean(val) => LiteralValue::Boolean(*val),
+            Null => LiteralValue::Boolean(false),
         }
     }
 }

@@ -10,5 +10,6 @@ pub enum Statement {
     ArithmeticExpr(Expr),
     Print(Expr),
     Declaration { id: Token, expr: Expr },
-    Block {statements: Vec<Statement>, }
+    Block {statements: Vec<Statement> },
+    If {condition: Expr, then_block: Box<Statement>, else_block: Option<Box<Statement>> }
 }

@@ -118,7 +118,7 @@ impl Expr {
                 let result = match (&rhs, operator.token_type) {
                     (LiteralValue::Number(num), TokenType::Minus) => Ok(LiteralValue::Number(-num)),
                     (_, TokenType::Minus) => Err(AstError::Unimplemented(TokenType::Minus, rhs).into()),
-                    (any, TokenType::Bang) => Ok(any.is_falsy()),
+                    (any, TokenType::Bang) => Ok(any.is_false()),
                     _ => Err(AstError::Unreachable(self.to_string()).into()),
                 };
 

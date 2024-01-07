@@ -21,6 +21,8 @@ lazy_static! {
         use TokenType::*;
         HashMap::from([
             ("let", Declaration),
+            ("if", If),
+            ("else", Else),
             ("for", For),
             ("print", Print),
             ("println", Println),
@@ -68,6 +70,8 @@ pub enum TokenType {
     Declaration, // let
     True,
     False,
+    If,
+    Else,
     For,
     Null,
     Print,
