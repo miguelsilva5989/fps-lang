@@ -39,13 +39,18 @@ impl Interpreter {
                     self.environment.declare(id.lexeme, value)?;
                     // println!("{value}");
                 }
-                Statement::Block { statements } => {
+                Statement::Block { statements: block_statements } => {
                     let mut new_env = Environment::new();
                     new_env.parent = Some(Rc::from(self.environment.clone()));
+                    println!("new_env {:?}", new_env);
                     let old_env = self.environment.clone();
+                    println!("old_env {:?}", old_env);
+                    println!("new_env {:?}", new_env);
                     self.environment = new_env;
-                    self.interpret_block(frame, stdout, statements)?;
+                    self.interpret_block(frame, stdout, block_statements)?;
+                    println!("old_env {:?}", old_env);
                     self.environment = old_env;
+
                 }
                 Statement::If {
                     condition,
@@ -55,9 +60,9 @@ impl Interpreter {
                     let cond = condition.eval(&mut self.environment)?;
 
                     if cond.is_true()? == LiteralValue::Boolean(true) {
-                        self.interpret_block(frame, stdout, vec![*then_block])?;
+                        self.interpret_block(frame, stdout, then_block)?;
                     } else if let Some(else_block) = else_block {
-                        self.interpret_block(frame, stdout, vec![*else_block])?;
+                        self.interpret_block(frame, stdout, else_block)?;
                     }
                 }
                 Statement::For { range: _, for_block: _ } => panic!("should no exist a the for block should be destructured into multiple statements"),
@@ -92,7 +97,7 @@ impl Interpreter {
         // println!("frames {:?}", self.fps.frames);
 
         for (frame, range_statements) in self.fps.frames.clone() {
-            // println!("frame {} statements: {:?}", frame, range_statements);
+            println!("frame {} statements: {:?}", frame, range_statements);
             for statement in range_statements {
                 // println!("{:?}", statement);
                 // match statement {

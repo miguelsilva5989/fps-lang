@@ -168,16 +168,27 @@ impl Parser {
     fn if_statement(&mut self) -> Result<Statement> {
         let expr = self.expression()?;
 
-        let then_block = self.statement()?;
+        self.consume(TokenType::OpenBrace, "Expected '{' after if condition")?;
+        let mut then_block: Vec<Statement> = vec![];
+        while !self.check_next_token(TokenType::CloseBrace) && !self.is_at_end() {
+            then_block.push(self.declaration()?);
+        }
+        self.consume(TokenType::CloseBrace, "Expected '}' after if then block")?;
 
         let mut else_block = None;
         if self.match_token(TokenType::Else) {
-            else_block = Some(Box::new(self.statement()?));
+            self.consume(TokenType::OpenBrace, "Expected '{' after else keyword")?;
+            let mut else_block_statements: Vec<Statement> = vec![];
+            while !self.check_next_token(TokenType::CloseBrace) && !self.is_at_end() {
+                else_block_statements.push(self.declaration()?);
+            }
+            self.consume(TokenType::CloseBrace, "Expected '}' after else block")?;
+            else_block = Some(else_block_statements)
         }
 
         Ok(Statement::If {
             condition: expr,
-            then_block: Box::new(then_block),
+            then_block: then_block,
             else_block: else_block,
         })
     }
@@ -186,11 +197,17 @@ impl Parser {
         use TokenType::*;
         if self.check_next_token(Range) || self.check_next_token(RangeEqual) {
             let expr = self.expression()?;
-            let for_block = self.statement()?;
+
+            self.consume(TokenType::OpenBrace, "Expected '{' after for range")?;
+            let mut for_block: Vec<Statement> = vec![];
+            while !self.check_next_token(TokenType::CloseBrace) && !self.is_at_end() {
+                for_block.push(self.declaration()?);
+            }
+            self.consume(TokenType::CloseBrace, "Expected '}' after for block")?;
 
             Ok(Statement::For {
                 range: expr,
-                for_block: Box::new(for_block),
+                for_block: for_block,
             })
         } else {
             return Err(ParserError::Consume("Expected a Range/RangeEqual after for declaraiton".to_owned()).into());
@@ -366,7 +383,7 @@ impl Parser {
             It => {
                 self.advance();
                 Ok(Expr::ReservedLiteral { value: token.lexeme })
-            },
+            }
             _ => {
                 // println!("{:?}", token);
                 return Err(ParserError::ExpectedExpression(token.lexeme.to_owned(), token.line).into());

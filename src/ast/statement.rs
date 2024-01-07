@@ -11,6 +11,6 @@ pub enum Statement {
     Print(Expr),
     Declaration { id: Token, expr: Expr },
     Block {statements: Vec<Statement> },
-    If {condition: Expr, then_block: Box<Statement>, else_block: Option<Box<Statement>> },
-    For {range: Expr, for_block: Box<Statement> },
+    If {condition: Expr, then_block: Vec<Statement>, else_block: Option<Vec<Statement>> },
+    For {range: Expr, for_block: Vec<Statement> },
 }

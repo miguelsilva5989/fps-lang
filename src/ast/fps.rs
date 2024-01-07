@@ -85,13 +85,10 @@ impl Fps {
                     // close test
 
                     let current_range = self.current_range.clone();
-                    println!("current_range {:?}", self.current_range);
 
                     let fps_duration = self.get_fps_duration_from_statement(environment, &statement)?;
-                    println!("duration {fps_duration}");
-                    buf_fps_statements.push(*for_block.clone());
+                    buf_fps_statements.extend(for_block.clone());
                     self.current_range = self.current_range.start..self.current_range.end + (self.current_range.end * fps_duration) - 1;
-                    println!("current_range {:?}", self.current_range);
                     self.add_buf_statements_to_frame(&buf_fps_statements);
                     buf_fps_statements.clear();
 
