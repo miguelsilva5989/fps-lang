@@ -97,7 +97,7 @@ impl Interpreter {
         // println!("frames {:?}", self.fps.frames);
 
         for (frame, range_statements) in self.fps.frames.clone() {
-            println!("frame {} statements: {:?}", frame, range_statements);
+            // println!("frame {} statements: {:?}", frame, range_statements);
             for statement in range_statements {
                 // println!("{:?}", statement);
                 // match statement {
