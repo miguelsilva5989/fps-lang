@@ -531,7 +531,7 @@ mod tests {
         ];
 
         let mut scanner = FpsInput::new(input);
-        let _ = scanner.scan_tokens();
+        let _tokens = scanner.scan_tokens();
 
         assert_eq!(scanner.tokens.len(), 16); //Eof counts as a Token
         assert_eq!(
@@ -546,9 +546,24 @@ mod tests {
         let expected = vec![Fps, EqualEqual, BangEqual, GreaterEqual, LessEqual, Eof];
 
         let mut scanner = FpsInput::new(input);
-        let _ = scanner.scan_tokens();
+        let _tokens = scanner.scan_tokens();
 
         assert_eq!(scanner.tokens.len(), 6); //Eof counts as a Token
+        assert_eq!(
+            scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
+            expected
+        );
+    }
+
+    #[test]
+    fn types() {
+        let input = "0..1 1..=2";
+        let expected = vec![Range, RangeEqual, Eof];
+
+        let mut scanner = FpsInput::new(input);
+        let _tokens = scanner.scan_tokens();
+
+        assert_eq!(scanner.tokens.len(), 3); //Eof counts as a Token
         assert_eq!(
             scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
             expected
@@ -561,7 +576,7 @@ mod tests {
         let expected = vec![Comment, Eof];
 
         let mut scanner = FpsInput::new(input);
-        let _ = scanner.scan_tokens();
+        let _tokens = scanner.scan_tokens();
 
         assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
         assert_eq!(scanner.tokens[0].lexeme, "I am a comment");
@@ -577,7 +592,7 @@ mod tests {
         let expected = vec![StringLiteral, Eof];
 
         let mut scanner = FpsInput::new(input);
-        let _ = scanner.scan_tokens();
+        let _tokens = scanner.scan_tokens();
 
         assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
         assert_eq!(
@@ -614,7 +629,7 @@ mod tests {
         let expected = vec![Identifer, Eof];
 
         let mut scanner = FpsInput::new(input);
-        let _ = scanner.scan_tokens();
+        let _tokens = scanner.scan_tokens();
 
         assert_eq!(scanner.tokens.len(), 2); //Eof counts as a Token
         assert_eq!(scanner.tokens[0].literal, Some(LiteralValue::Identifier("id".to_owned())));
