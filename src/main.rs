@@ -15,7 +15,7 @@ mod parser;
 #[derive(ClapParser, Debug)]
 #[command(author, version, about)]
 struct Cli {
-    /// To access the REPL
+    /// flag to access the REPL
     #[arg(short, long)]
     repl: bool,
 }
@@ -66,7 +66,7 @@ fn execute(interpreter: &mut Interpreter, input: &str) -> Result<()> {
 
 fn run_prompt() -> Result<()> {
     println!("# REPL  -  FPS Lang #");
-    println!("----------_---------");
+    println!("--------------------");
     println!("Type '\\q' to exit");
     let mut buffer = String::new();
     let mut interpreter: Interpreter = Interpreter::new();

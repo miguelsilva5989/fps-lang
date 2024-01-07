@@ -67,6 +67,81 @@ FPS 7 -> printed at frames 2|3|4|5|6|7 - declared at frame 1 inside for loop
 FPS 7 -> 6 // 'a' value - printed inside for loop
 ```
 
+## Usage
+
+```sh
+cargo run -- --help
+
+Usage: fps-lang.exe [OPTIONS]
+
+Options:
+  -r, --repl     Flag to access the REPL
+  -h, --help     Print help
+  -V, --version  Print version
+```
+
+### Execute
+
+`Note` that currently it only executes the content of `sample.fps` file.
+
+I'll be adding a custom file input soon 😊
+
+```sh
+cargo run --
+```
+
+### REPL
+
+Start a REPL
+
+```sh
+cargo run -- -r
+
+# REPL  -  FPS Lang #
+--------------------
+Type '\q' to exit
+fps>
+```
+
+```sh
+fps> let a = 0; print(a); ##
+FPS 1 -> 0
+```
+
+### Tests
+
+Execute the currently implemented tests
+
+```sh
+cargo test
+
+running 21 tests
+test ast::environment::tests::assign ... ok
+test ast::environment::tests::declare_different_env ... ok
+test ast::environment::tests::declare ... ok
+test lexer::tests::single_char_tokens ... ok
+test parser::tests::test_addition ... ok
+test lexer::tests::numeric_literal ... ok
+test parser::tests::test_comparison_paren ... ok
+test lexer::tests::types ... ok
+test lexer::tests::string_literal ... ok
+test lexer::tests::unterminated_consumption ... ok
+test lexer::tests::two_char_tokens ... ok
+test lexer::tests::identifer_literal ... ok
+test lexer::tests::keywords ... ok
+test parser::tests::declaration ... ok
+test parser::tests::declaration_assign ... ok
+test parser::tests::declaration_print ... ok
+test lexer::tests::comment ... ok
+test interpreter::tests::multiple_frames ... ok
+test parser::tests::test_comparison ... ok
+test ast::expr::tests::pretty_print_ast ... ok
+test parser::tests::test_print_statement ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+
 
 ## Types
 
