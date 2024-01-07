@@ -29,11 +29,13 @@ We need to wait as time progresses to interact with actions that are requested a
 
 ### Syntax
 
-| Syntax                    | Description                                                                 | Example                       |
-| ------------------------- | --------------------------------------------------------------------------- | ----------------------------- |
-| let id=\<val>;            | variable desclaration                                                       | # a let = 0; ##               |
-| #2                        | the next frame block is 2 and all statements in it will be executed 2 times | #2 print("hello\n"); ##       |
-| for 0..2 { <statements> } | for loop                                                                    | # for 0..2 { println(it);} ## |
+| Syntax                                         | Description                                                                 | Example                       |
+| ---------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------- |
+| let id=\<val>;                                 | variable desclaration                                                       | # a let = 0; ##               |
+| 0..1 or 0..=1                                  | range desclaration                                                          | 0..1 ##                       |
+| #2                                             | the next frame block is 2 and all statements in it will be executed 2 times | #2 print("hello\n"); ##       |
+| for 0..2 { <statements> }                      | for loop                                                                    | for 0..2 { println(it);} ##   |
+| if 1==1 { <statements> } else { <statements> } | if else                                                                     | if 1==1 { print("same"); } ## |
 
 #### Example outputs
 

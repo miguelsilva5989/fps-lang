@@ -22,5 +22,14 @@ a = 2;
 
 print(a);
 
+if 1 == 1 {
+    let a = 0;
+}
+
+if 0 == 1 {
+    print("same2");
+} else {
+    print("not equals");
+}
 
 ##

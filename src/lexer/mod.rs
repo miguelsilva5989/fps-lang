@@ -13,6 +13,8 @@ use thiserror::Error;
 enum LexerError {
     #[error("Unrecognized char '{0}' at line {1}")]
     UnrecognizedChar(char, usize),
+    #[error("Could not parse range at line {0}. Expected a digit after ..")]
+    Range(usize),
     #[error("Unterminated consumption until char '{0:?}' at line {2}. Consumed: {1}")]
     UnterminatedConsumption(Vec<char>, String, usize),
 }
@@ -21,6 +23,7 @@ lazy_static! {
         use TokenType::*;
         HashMap::from([
             ("let", Declaration),
+            ("it", It), // Reference to index inside the for loop
             ("if", If),
             ("else", Else),
             ("for", For),
@@ -59,7 +62,9 @@ pub enum TokenType {
     Less,
     LessEqual,
 
-    // symbols
+    // types
+    Range,
+    RangeEqual,
 
     // literals
     Identifer,
@@ -73,6 +78,7 @@ pub enum TokenType {
     If,
     Else,
     For,
+    It, // Reference to index inside the for loop
     Null,
     Print,
     Println,
@@ -205,7 +211,7 @@ impl<'a> FpsInput<'a> {
         Ok(ch)
     }
 
-    fn eat(&mut self) -> Result<Option<char>> {
+    fn advance(&mut self) -> Result<Option<char>> {
         let ch = self.peek();
         self.current += 1;
         ch
@@ -232,6 +238,27 @@ impl<'a> FpsInput<'a> {
             }
         }
         Ok(consumed)
+    }
+
+    fn next_chars_match(&mut self, chars: Vec<char>) -> Result<bool> {
+        let current = self.current;
+        let mut is_same = false;
+        for ch in chars {
+            if self.is_next_char_match(ch) {
+                is_same = true;
+                self.advance()?;
+            } else {
+                is_same = false;
+                break;
+            }
+        }
+
+        // go back to initial position if chars don't match
+        if !is_same {
+            self.current = current;
+        }
+
+        Ok(is_same)
     }
 
     fn is_next_char_match(&mut self, ch: char) -> bool {
@@ -296,14 +323,13 @@ impl<'a> FpsInput<'a> {
                         } else if self.is_next_char_match('.') {
                             // check if consumed already has more dots??
                             if consumed.contains(".") {
-                                break
+                                break;
                             }
 
                             consumed.push_str(next.to_string().as_str());
                             self.current += 1;
                             consumed += self.consume_number().as_str();
-                        } 
-                        else {
+                        } else {
                             break;
                         }
                     } else {
@@ -342,8 +368,35 @@ impl<'a> FpsInput<'a> {
         consumed
     }
 
+    fn consume_range(&mut self) -> Result<String> {
+        let mut consumed = "..".to_owned();
+
+        if self.is_next_char_match('=') {
+            consumed.push(self.advance().unwrap().unwrap());
+        }
+
+        match self.peek() {
+            Ok(is_next) => {
+                if let Some(next) = is_next {
+                    if next.is_digit(10) {
+                        consumed.push_str(next.to_string().as_str());
+                        self.current += 1;
+                    } else {
+                        return Err(LexerError::Range(self.line).into());
+                    }
+                } else {
+                    return Err(LexerError::Range(self.line).into());
+                }
+            }
+            //Eof
+            Err(_) => return Err(LexerError::Range(self.line).into()),
+        }
+
+        Ok(consumed)
+    }
+
     fn tokenzine(&mut self) -> Result<Option<Token>> {
-        if let Ok(Some(ch)) = self.eat() {
+        if let Ok(Some(ch)) = self.advance() {
             use TokenType::*;
             let token = match ch {
                 // whitespaces
@@ -431,10 +484,18 @@ impl<'a> FpsInput<'a> {
                 _ => {
                     if ch.is_digit(10) {
                         let mut num: String = ch.into();
-
-                        num.push_str(self.consume_number().as_str());
-
-                        self.create_token(Number, num.clone(), Some(LiteralValue::Float(num.parse::<f64>().unwrap())))
+                        if self.next_chars_match(vec!['.', '.'])? {
+                            let mut range = num;
+                            range.push_str(self.consume_range()?.as_str());
+                            if range.contains("=") {
+                                self.create_token(RangeEqual, range.clone(), None)
+                            } else {
+                                self.create_token(Range, range.clone(), None)
+                            }
+                        } else {
+                            num.push_str(self.consume_number().as_str());
+                            self.create_token(Number, num.clone(), Some(LiteralValue::Float(num.parse::<f64>().unwrap())))
+                        }
                     } else if ch.is_alphabetic() {
                         let mut id: String = ch.into();
                         id.push_str(self.consume_identifier().as_str());
