@@ -143,7 +143,10 @@ impl Expr {
                 }
             } 
             Expr::Ignore { token: _ } => Ok(LiteralValue::Null),
-            Expr::ReservedLiteral { value } => todo!(),
+            Expr::ReservedLiteral { value } => {
+                println!("TODO implement IT inside for loop. {}", value);
+                todo!()
+            },
             // Expr::Fps { count } => Ok(LiteralValue::Number(*count)),
         }
     }

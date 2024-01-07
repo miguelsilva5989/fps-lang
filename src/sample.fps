@@ -1,8 +1,19 @@
-0..1;
+print("frame 1");
+let a = 0;
 
-for 0..=2 { 
-    print("a");
+#3
+// a = a + 1;
+// print("should be frame 2|3|4");
+
+for 0..=1 {
+    // print("frames 2|3|4|5|6|7"); 
+    a = a + 1;
+    print(a);
 }
+
+#
+print("Prints on frame 5");
+print(a); // should print 3
 
 ##
 

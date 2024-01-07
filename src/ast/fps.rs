@@ -1,7 +1,8 @@
 use anyhow::Result;
 use std::{collections::BTreeMap, ops::Range};
 
-use super::statement::Statement;
+use super::{environment::Environment, statement::Statement};
+use crate::ast::LiteralValue as AstLiteralValue;
 use crate::lexer::{LiteralValue, Token};
 
 #[derive(Debug)]
@@ -37,37 +38,66 @@ impl Fps {
             for statement in buf {
                 buf_statements.push(statement.clone());
             }
-            self.frames.entry(fps + 1).or_insert(buf_statements.clone());
+            self.frames.entry(fps + 1).and_modify(|x| x.extend(buf_statements.clone())).or_insert(buf_statements.clone());
             buf_statements.clear();
         }
     }
 
-    fn get_fps_duration_from_statement(&self, fps_statement: &Statement) -> usize {
+    fn get_fps_duration_from_statement(&self, environment: &mut Environment, fps_statement: &Statement) -> Result<usize> {
         match fps_statement {
-            Statement::Fps(next_fps) => self.get_fps_duration_from_token(&next_fps),
-            Statement::FpsEnd(_) => 1,
-            _ => 0,
+            Statement::Fps(next_fps) => Ok(self.get_fps_duration_from_token(&next_fps)),
+            Statement::FpsEnd(_) => Ok(1),
+            Statement::For { range, for_block: _ } => {
+                let range = range.eval(environment)?;
+                match range {
+                    AstLiteralValue::Range((start, end)) => Ok(end - start - 1),
+                    AstLiteralValue::RangeEqual((start, end)) => Ok(end - start),
+                    _ => panic!(),
+                }
+            }
+            _ => panic!("cannot retrieve fps duration from this statement {:?}", fps_statement),
         }
     }
 
-    pub fn allocate_statements_to_frame(&mut self, statements: Vec<Statement>) -> Result<()> {
+    pub fn allocate_statements_to_frame(&mut self, environment: &mut Environment, statements: Vec<Statement>) -> Result<()> {
         let mut buf_fps_statements: Vec<Statement> = vec![];
 
         for statement in statements {
-            if matches!(statement, Statement::Fps(_)) {
-                self.add_buf_statements_to_frame(&buf_fps_statements);
-                let next_fps: usize = self.get_fps_duration_from_statement(&statement);
-                self.current_range = self.current_range.end..self.current_range.end + next_fps;
-                buf_fps_statements.clear();
-            } else if matches!(statement, Statement::FpsEnd(_)) {
-                self.add_buf_statements_to_frame(&buf_fps_statements);
-                self.current_range = self.current_range.end..self.current_range.end;
-                buf_fps_statements.clear();
-            } else if matches!(statement, Statement::Comment(_)) {
-                // ignore
-            } else {
-                // println!("\t> inserting statement {:?}", statement);
-                buf_fps_statements.push(statement.clone());
+            match statement {
+                Statement::Fps(_) => {
+                    self.add_buf_statements_to_frame(&buf_fps_statements);
+                    let next_fps: usize = self.get_fps_duration_from_statement(environment, &statement)?;
+                    self.current_range = self.current_range.end..self.current_range.end + next_fps;
+                    buf_fps_statements.clear();
+                }
+                Statement::FpsEnd(_) => {
+                    self.add_buf_statements_to_frame(&buf_fps_statements);
+                    self.current_range = self.current_range.end..self.current_range.end;
+                    buf_fps_statements.clear();
+                }
+                Statement::Comment(_) => {
+                    // ignore
+                }
+                Statement::For { range: _, ref for_block } => {
+                    // clear buf first (if statements before the for block?)
+                    self.add_buf_statements_to_frame(&buf_fps_statements);
+                    buf_fps_statements.clear();
+                    // close test
+
+                    let current_range = self.current_range.clone();
+                    println!("current_range {:?}", self.current_range);
+
+                    let fps_duration = self.get_fps_duration_from_statement(environment, &statement)?;
+                    println!("duration {fps_duration}");
+                    buf_fps_statements.push(*for_block.clone());
+                    self.current_range = self.current_range.start..self.current_range.end + (self.current_range.end * fps_duration) - 1;
+                    println!("current_range {:?}", self.current_range);
+                    self.add_buf_statements_to_frame(&buf_fps_statements);
+                    buf_fps_statements.clear();
+
+                    self.current_range = current_range;
+                }
+                _ => buf_fps_statements.push(statement.clone()),
             }
         }
 

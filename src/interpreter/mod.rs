@@ -4,7 +4,6 @@ use std::rc::Rc;
 use crate::ast::fps::Fps;
 use crate::ast::literal::LiteralValue;
 use crate::ast::{environment::Environment, statement::Statement};
-use crate::lexer::TokenType;
 
 use anyhow::Result;
 
@@ -61,41 +60,47 @@ impl Interpreter {
                         self.interpret_block(frame, stdout, vec![*else_block])?;
                     }
                 }
-                Statement::For { range, for_block } => {
-                    let range = range.eval(&mut self.environment)?;
-                    let mut for_blocks: Vec<Statement> = vec![];
-                    match range {
-                        LiteralValue::Range((start, end)) => {
-                            let range = start..end;
-                            for _ in range {
-                                for_blocks.push(*for_block.clone());
-                            }
-                        }
-                        LiteralValue::RangeEqual((start, end)) => {
-                            let range = start..=end;
-                            for _ in range {
-                                for_blocks.push(*for_block.clone());
-                            }
-                        }
-                        _ => panic!(),
-                    }
+                Statement::For { range: _, for_block: _ } => panic!("should no exist a the for block should be destructured into multiple statements"),
+                // Statement::For { range, for_block } => {
+                //     let range = range.eval(&mut self.environment)?;
+                //     let mut for_blocks: Vec<Statement> = vec![];
+                //     match range {
+                //         LiteralValue::Range((start, end)) => {
+                //             let range = start..end;
+                //             for _ in range {
+                //                 for_blocks.push(*for_block.clone());
+                //             }
+                //         }
+                //         LiteralValue::RangeEqual((start, end)) => {
+                //             let range = start..=end;
+                //             for _ in range {
+                //                 for_blocks.push(*for_block.clone());
+                //             }
+                //         }
+                //         _ => panic!(),
+                //     }
 
-                    self.interpret_block(frame, stdout, for_blocks)?;
-                }
+                //     self.interpret_block(frame, stdout, for_blocks)?;
+                // }
             };
         }
         Ok(())
     }
 
     pub fn interpret(&mut self, stdout: &mut dyn io::Write, statements: Vec<Statement>) -> Result<()> {
-        self.fps.allocate_statements_to_frame(statements)?;
+        self.fps.allocate_statements_to_frame(&mut self.environment, statements)?;
         // println!("frames {:?}", self.fps.frames);
 
         for (frame, range_statements) in self.fps.frames.clone() {
             // println!("frame {} statements: {:?}", frame, range_statements);
             for statement in range_statements {
                 // println!("{:?}", statement);
-                self.interpret_block(frame, stdout, vec![statement])?;
+                // match statement {
+                //     Statement::For { range, for_block } => todo!(),
+                //     _ => self.interpret_block(frame, stdout, vec![statement])?,
+                // }
+
+                self.interpret_block(frame, stdout, vec![statement])?
             }
         }
 
