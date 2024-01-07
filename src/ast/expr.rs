@@ -18,6 +18,9 @@ pub enum Expr {
     Literal {
         value: LiteralValue,
     },
+    ReservedLiteral {
+        value: String,
+    },
     Unary {
         operator: Token,
         right: Box<Expr>,
@@ -43,6 +46,7 @@ impl Display for Expr {
             Expr::Binary { left, operator, right } => write!(format, "({} {} {})", operator.lexeme, left, right),
             Expr::Grouping { expr } => write!(format, "(group {})", expr),
             Expr::Literal { value } => write!(format, "{}", value),
+            Expr::ReservedLiteral { value } => write!(format, "{}", value),
             Expr::Unary { operator, right } => write!(format, "({} {})", operator.lexeme, right),
             Expr::Variable { id } => write!(format, "(var {})", id.lexeme),
             Expr::Assign { id, value } => write!(format, "({} = {})", id.lexeme, value),
@@ -118,7 +122,7 @@ impl Expr {
                 let result = match (&rhs, operator.token_type) {
                     (LiteralValue::Number(num), TokenType::Minus) => Ok(LiteralValue::Number(-num)),
                     (_, TokenType::Minus) => Err(AstError::Unimplemented(TokenType::Minus, rhs).into()),
-                    (any, TokenType::Bang) => Ok(any.is_false()),
+                    (any, TokenType::Bang) => Ok(any.is_false()?),
                     _ => Err(AstError::Unreachable(self.to_string()).into()),
                 };
 
@@ -139,6 +143,7 @@ impl Expr {
                 }
             } 
             Expr::Ignore { token: _ } => Ok(LiteralValue::Null),
+            Expr::ReservedLiteral { value } => todo!(),
             // Expr::Fps { count } => Ok(LiteralValue::Number(*count)),
         }
     }

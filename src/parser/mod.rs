@@ -132,6 +132,10 @@ impl Parser {
                 self.advance();
                 self.if_statement()
             }
+            For => {
+                self.advance();
+                self.for_statement()
+            }
             _ => self.expression_statement(),
         }
     }
@@ -165,7 +169,7 @@ impl Parser {
         let expr = self.expression()?;
 
         let then_block = self.statement()?;
-        
+
         let mut else_block = None;
         if self.match_token(TokenType::Else) {
             else_block = Some(Box::new(self.statement()?));
@@ -176,6 +180,21 @@ impl Parser {
             then_block: Box::new(then_block),
             else_block: else_block,
         })
+    }
+
+    fn for_statement(&mut self) -> Result<Statement> {
+        use TokenType::*;
+        if self.check_next_token(Range) || self.check_next_token(RangeEqual) {
+            let expr = self.expression()?;
+            let for_block = self.statement()?;
+
+            Ok(Statement::For {
+                range: expr,
+                for_block: Box::new(for_block),
+            })
+        } else {
+            return Err(ParserError::Consume("Expected a Range/RangeEqual after for declaraiton".to_owned()).into());
+        }
     }
 
     fn expression_statement(&mut self) -> Result<Statement> {
@@ -322,6 +341,12 @@ impl Parser {
                     value: LiteralValue::from_token(token)?,
                 })
             }
+            Range | RangeEqual => {
+                self.advance();
+                Ok(Expr::Literal {
+                    value: LiteralValue::from_token(token)?,
+                })
+            }
             OpenParen => {
                 self.advance();
                 let expr = self.expression()?;
@@ -338,6 +363,10 @@ impl Parser {
             }),
             FpsEnd => Ok(Expr::Literal { value: LiteralValue::Null }),
             Comment => Ok(Expr::Ignore { token: token }),
+            It => {
+                self.advance();
+                Ok(Expr::ReservedLiteral { value: token.lexeme })
+            },
             _ => {
                 // println!("{:?}", token);
                 return Err(ParserError::ExpectedExpression(token.lexeme.to_owned(), token.line).into());

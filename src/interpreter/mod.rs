@@ -4,6 +4,7 @@ use std::rc::Rc;
 use crate::ast::fps::Fps;
 use crate::ast::literal::LiteralValue;
 use crate::ast::{environment::Environment, statement::Statement};
+use crate::lexer::TokenType;
 
 use anyhow::Result;
 
@@ -54,11 +55,32 @@ impl Interpreter {
                 } => {
                     let cond = condition.eval(&mut self.environment)?;
 
-                    if cond.is_true() == LiteralValue::Boolean(true) {
+                    if cond.is_true()? == LiteralValue::Boolean(true) {
                         self.interpret_block(frame, stdout, vec![*then_block])?;
                     } else if let Some(else_block) = else_block {
                         self.interpret_block(frame, stdout, vec![*else_block])?;
                     }
+                }
+                Statement::For { range, for_block } => {
+                    let range = range.eval(&mut self.environment)?;
+                    let mut for_blocks: Vec<Statement> = vec![];
+                    match range {
+                        LiteralValue::Range((start, end)) => {
+                            let range = start..end;
+                            for _ in range {
+                                for_blocks.push(*for_block.clone());
+                            }
+                        }
+                        LiteralValue::RangeEqual((start, end)) => {
+                            let range = start..=end;
+                            for _ in range {
+                                for_blocks.push(*for_block.clone());
+                            }
+                        }
+                        _ => panic!(),
+                    }
+
+                    self.interpret_block(frame, stdout, for_blocks)?;
                 }
             };
         }
