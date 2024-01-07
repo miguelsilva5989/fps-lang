@@ -38,7 +38,10 @@ impl Fps {
             for statement in buf {
                 buf_statements.push(statement.clone());
             }
-            self.frames.entry(fps + 1).and_modify(|x| x.extend(buf_statements.clone())).or_insert(buf_statements.clone());
+            self.frames
+                .entry(fps + 1)
+                .and_modify(|x| x.extend(buf_statements.clone()))
+                .or_insert(buf_statements.clone());
             buf_statements.clear();
         }
     }
@@ -88,7 +91,12 @@ impl Fps {
 
                     let fps_duration = self.get_fps_duration_from_statement(environment, &statement)?;
                     buf_fps_statements.extend(for_block.clone());
-                    self.current_range = self.current_range.start..self.current_range.end + (self.current_range.end * fps_duration) - 1;
+                    if self.current_range.end == 1 { // At frame 0 we can't subtract by 1 at the end
+                        self.current_range = self.current_range.start..self.current_range.end + (self.current_range.end * fps_duration);
+                    } else {
+                        self.current_range = self.current_range.start..self.current_range.end + (self.current_range.end * fps_duration) - 1;
+                    }
+                    // println!("current_range for {:?}", self.current_range);
                     self.add_buf_statements_to_frame(&buf_fps_statements);
                     buf_fps_statements.clear();
 

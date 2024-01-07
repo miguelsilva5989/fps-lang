@@ -12,77 +12,152 @@ This is based on the book [Crafting Interpreters](https://craftinginterpreters.c
 
 \# represents a frame
 
-```
-let a=1; # a; ## <- exit program on last frame
+```rust
+let a=1; # print(a); ## <- exit program on last frame
 ^        ^
-|        |_frame 1
-frame 0
+|        |_frame 1 -> 'print(a);' will be executed on frame 2
+frame 0 -> 'let a = 1;' will be executed on frame 1
 ```
-<!-- 
-This will **not work** as the variable 'a' assignment was requested on frame 0.
-We need to wait as time progresses to interact with actions that are requested at a particular frame.
-```
-# let a=1; print(a); ##
-           ^
-           |
-``` -->
+
+## Types
+
+Currently supported types
+
+| Type                 | Declaration |
+| -------------------- | ----------- |
+| Int                  | 1           |
+| Float                | 1. or 1.0   |
+| String               | "value"     |
+| Boolean              | true        |
+| Range(int, int)      | 0..1        |
+| RangeEqual(int, int) | 0..1=       |
+| Null                 | null        |
+
 
 ### Syntax
 
-| Syntax                                         | Description                                                                 | Example                       |
-| ---------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------- |
-| let id=\<val>;                                 | variable desclaration                                                       | # a let = 0; ##               |
-| 0..1 or 0..=1                                  | range desclaration                                                          | 0..1 ##                       |
-| #2                                             | the next frame block is 2 and all statements in it will be executed 2 times | #2 print("hello\n"); ##       |
-| for 0..2 { <statements> }                      | for loop                                                                    | for 0..2 { println(it);} ##   |
-| if 1==1 { <statements> } else { <statements> } | if else                                                                     | if 1==1 { print("same"); } ## |
+#### Frame
 
-#### Example outputs
+`#` represents a frame
 
-##### Multiple frames
-```
-#2 print("hello"); ##
-
-output:
-hello
-hello
+```rust
+let a = 0;
+print(a);
+# 
+print(a);
+##
 ```
 
-```
-let a= 0; #5 a = a + 1; print(a); ##
-
-output:
-1
-2
-3
-4
-5
+output
+```rust
+FPS 1 -> 0
+FPS 2 -> 0
 ```
 
-##### For loop
+#### FPS Program end
 
+`##` represents the end of the program
+
+#### Declaration / Assignment
+
+Use `let` to declare a variable.
+
+```rust
+let a = 0;
 ```
-for 0..=2 { print(it); } ##
 
-output:
-0
-1
-2
+#### Range
+
+Use `..` surround by 2 digits to define a `Range`.
+
+A `Range` is bound inclusively below and exclusively above.
+
+Ranges can also be `RangeEqual` by adding a `=` sign to the range `0..=1`
+
+A `RangeEqual` is bound inclusively below and inclusively above.
+
+#### For loop
+
+```rust
+for 0..2 { print("hello"); } ##
 ```
 
-And here is where it gets weird 🤣
+output
+```rust
+FPS 1 -> hello
+FPS 2 -> hello
 ```
-for 1..=3 { print("\nframe {}", it); } # print(" - another print in same frame '1'\n") ##
-^           ^                          ^
-|           |                          |_ frame 1
-|           |_this will start being executed on the next frame (1)
-frame 0
 
+#### If/Else block
 
-output:
+```rust
+if 0 == 1 {
+    print("equals");
+} else {
+    print("not equals");
+}
+```
 
-frame 1 - another print in same frame '1'
+#### Block with scope logic
 
-frame 2
-frame 3
+```rust
+let a = 1;
+
+{
+    let b = 1;
+    print(a + b);
+}
+
+##
+```
+
+output
+```rust
+FPS 1 -> 2
+```
+
+#### Weird
+
+And there is where FPS Lang shines at being weird 🤣
+
+```rust
+// this is FRAME 0
+print("printed at frame 1 - declared at frame 0");
+let a = 0;
+
+#3 // frame 1 will be executed 3 times
+print("printed at frames 2|3|4 - declared at frame 1");
+
+for 0..=1 {
+    print("printed at frames 2|3|4|5|6|7 - declared at frame 1 inside for loop"); 
+    a = a + 1;
+    print(a);
+}
+
+# // frame 4
+print("printed at frame 5 - declared at frame 4");
+print(a); // should print 4
+##
+```
+
+output
+```rust
+FPS 1 -> printed at frame 1 - declared at frame 0
+FPS 2 -> printed at frames 2|3|4 - declared at frame 1
+FPS 2 -> printed at frames 2|3|4|5|6|7 - declared at frame 1 inside for loop
+FPS 2 -> 1 // 'a' value - printed inside for loop
+FPS 3 -> printed at frames 2|3|4 - declared at frame 1
+FPS 3 -> printed at frames 2|3|4|5|6|7 - declared at frame 1 inside for loop
+FPS 3 -> 2 // 'a' value - printed inside for loop
+FPS 4 -> printed at frames 2|3|4 - declared at frame 1
+FPS 4 -> printed at frames 2|3|4|5|6|7 - declared at frame 1 inside for loop
+FPS 4 -> 3 // 'a' value - printed inside for loop
+FPS 5 -> printed at frames 2|3|4|5|6|7 - declared at frame 1 inside for loop
+FPS 5 -> 4 // 'a' value - printed inside for loop
+FPS 5 -> printed at frame 5 - declared at frame 4
+FPS 5 -> 4 // 'a' value - printed at frame 5 (declared at frame 4)
+FPS 6 -> printed at frames 2|3|4|5|6|7 - declared at frame 1 inside for loop
+FPS 6 -> 5 // 'a' value - printed inside for loop
+FPS 7 -> printed at frames 2|3|4|5|6|7 - declared at frame 1 inside for loop
+FPS 7 -> 6 // 'a' value - printed inside for loop
 ```

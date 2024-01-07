@@ -42,13 +42,13 @@ impl Interpreter {
                 Statement::Block { statements: block_statements } => {
                     let mut new_env = Environment::new();
                     new_env.parent = Some(Rc::from(self.environment.clone()));
-                    println!("new_env {:?}", new_env);
+                    // println!("new_env {:?}", new_env);
                     let old_env = self.environment.clone();
-                    println!("old_env {:?}", old_env);
-                    println!("new_env {:?}", new_env);
+                    // println!("old_env {:?}", old_env);
+                    // println!("new_env {:?}", new_env);
                     self.environment = new_env;
                     self.interpret_block(frame, stdout, block_statements)?;
-                    println!("old_env {:?}", old_env);
+                    // println!("old_env {:?}", old_env);
                     self.environment = old_env;
 
                 }
