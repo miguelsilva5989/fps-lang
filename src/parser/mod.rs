@@ -210,7 +210,7 @@ impl Parser {
                 for_block: for_block,
             })
         } else {
-            return Err(ParserError::Consume("Expected a Range/RangeEqual after for declaraiton".to_owned()).into());
+            return Err(ParserError::Consume("Expected a Range/RangeEqual after for declaration".to_owned()).into());
         }
     }
 
@@ -236,7 +236,7 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> Result<Expr> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         // println!("expr {:?}", expr);
 
@@ -247,6 +247,34 @@ impl Parser {
                 Expr::Variable { id } => return Ok(Expr::Assign { id, value: Box::new(val) }),
                 _ => return Err(ParserError::InvalidAssignment.into()),
             }
+        }
+
+        Ok(expr)
+    }
+
+    fn or(&mut self) -> Result<Expr> {
+        let mut expr = self.and()?;
+
+        while self.match_token(TokenType::Or) {
+            let operator = self.previous();
+            let right = self.and()?;
+
+            expr = Expr::Logical { left: Box::new(expr), operator: operator, right: Box::new(right) };
+
+            
+        }
+
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> Result<Expr> {
+        let mut expr = self.equality()?;
+
+        while self.match_token(TokenType::And) {
+            let operator = self.previous();
+            let right = self.equality()?;
+
+            expr = Expr::Logical { left: Box::new(expr), operator: operator, right: Box::new(right) };
         }
 
         Ok(expr)
@@ -510,6 +538,30 @@ mod tests {
         let expression = parser.expression();
 
         assert_eq!(expression.unwrap().to_string(), "(== (+ 4 20) (+ 5 6))")
+    }
+
+    #[test]
+
+    fn test_logical_and() {
+        let input = "true && true";
+        let mut scanner = FpsInput::new(input);
+        scanner.scan_tokens().expect("error scanning tokens");
+
+        let mut parser = Parser::new(scanner.tokens);
+        let expression = parser.expression();
+
+        assert_eq!(expression.unwrap().to_string(), "(&& true true)")
+    }
+    #[test]
+    fn test_logical_or() {
+        let input = "true || true";
+        let mut scanner = FpsInput::new(input);
+        scanner.scan_tokens().expect("error scanning tokens");
+
+        let mut parser = Parser::new(scanner.tokens);
+        let expression = parser.expression();
+
+        assert_eq!(expression.unwrap().to_string(), "(|| true true)")
     }
 
     #[test]

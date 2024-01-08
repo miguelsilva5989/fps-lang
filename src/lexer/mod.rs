@@ -63,6 +63,9 @@ pub enum TokenType {
     LessEqual,
 
     // types
+    True,
+    False,
+    Null,
     Range,
     RangeEqual,
 
@@ -73,13 +76,12 @@ pub enum TokenType {
 
     // keywords
     Declaration, // let
-    True,
-    False,
     If,
     Else,
     For,
+    And,
+    Or,
     It, // Reference to index inside the for loop
-    Null,
     Print,
     Println,
 
@@ -471,6 +473,22 @@ impl<'a> FpsInput<'a> {
                         self.create_token(Less, ch.into(), None)
                     }
                 }
+                '&' => {
+                    if self.is_next_char_match('&') {
+                        self.current += 1;
+                        self.create_token(And, "&&".to_owned(), None)
+                    } else {
+                        self.match_default(ch)?
+                    }
+                }
+                '|' => {
+                    if self.is_next_char_match('|') {
+                        self.current += 1;
+                        self.create_token(Or, "||".to_owned(), None)
+                    } else {
+                        self.match_default(ch)?
+                    }
+                }
                 // literals
                 '"' => {
                     let string_literal = self.consume_string()?;
@@ -482,39 +500,46 @@ impl<'a> FpsInput<'a> {
                 }
 
                 _ => {
-                    if ch.is_digit(10) {
-                        let mut num: String = ch.into();
-                        if self.next_chars_match(vec!['.', '.'])? {
-                            let mut range = num;
-                            range.push_str(self.consume_range()?.as_str());
-                            if range.contains("=") {
-                                self.create_token(RangeEqual, range.clone(), None)
-                            } else {
-                                self.create_token(Range, range.clone(), None)
-                            }
-                        } else {
-                            num.push_str(self.consume_number().as_str());
-                            self.create_token(Number, num.clone(), Some(LiteralValue::Float(num.parse::<f64>().unwrap())))
-                        }
-                    } else if ch.is_alphabetic() {
-                        let mut id: String = ch.into();
-                        id.push_str(self.consume_identifier().as_str());
-
-                        if let Some(tt) = KEYWORDS.get(id.as_str()) {
-                            self.create_token(*tt, id.clone(), Some(LiteralValue::Keyword(id)))
-                        } else {
-                            self.create_token(Identifer, id.clone(), Some(LiteralValue::Identifier(id)))
-                        }
-                    } else {
-                        self.current += 1;
-                        return Err(LexerError::UnrecognizedChar(ch, self.line).into());
-                    }
+                    self.match_default(ch)?
                 }
             };
 
             return Ok(Some(token));
         }
         Ok(None)
+    }
+
+    fn match_default(&mut self, ch: char) -> Result<Token> {
+        use TokenType::*;
+        let token = if ch.is_digit(10) {
+            let mut num: String = ch.into();
+            if self.next_chars_match(vec!['.', '.'])? {
+                let mut range = num;
+                range.push_str(self.consume_range()?.as_str());
+                if range.contains("=") {
+                    self.create_token(RangeEqual, range.clone(), None)
+                } else {
+                    self.create_token(Range, range.clone(), None)
+                }
+            } else {
+                num.push_str(self.consume_number().as_str());
+                self.create_token(Number, num.clone(), Some(LiteralValue::Float(num.parse::<f64>().unwrap())))
+            }
+        } else if ch.is_alphabetic() {
+            let mut id: String = ch.into();
+            id.push_str(self.consume_identifier().as_str());
+
+            if let Some(tt) = KEYWORDS.get(id.as_str()) {
+                self.create_token(*tt, id.clone(), Some(LiteralValue::Keyword(id)))
+            } else {
+                self.create_token(Identifer, id.clone(), Some(LiteralValue::Identifier(id)))
+            }
+        } else {
+            self.current += 1;
+            return Err(LexerError::UnrecognizedChar(ch, self.line).into());
+        };
+
+        return Ok(token);
     }
 }
 
@@ -542,13 +567,13 @@ mod tests {
 
     #[test]
     fn two_char_tokens() {
-        let input = "#10 == != >= <=";
-        let expected = vec![Fps, EqualEqual, BangEqual, GreaterEqual, LessEqual, Eof];
+        let input = "#10 == != >= <= && || ";
+        let expected = vec![Fps, EqualEqual, BangEqual, GreaterEqual, LessEqual, And, Or, Eof];
 
         let mut scanner = FpsInput::new(input);
         let _tokens = scanner.scan_tokens();
 
-        assert_eq!(scanner.tokens.len(), 6); //Eof counts as a Token
+        assert_eq!(scanner.tokens.len(), 8); //Eof counts as a Token
         assert_eq!(
             scanner.tokens.into_iter().map(|x| x.token_type).collect::<Vec<TokenType>>(),
             expected

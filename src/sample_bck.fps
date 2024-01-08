@@ -1,22 +1,30 @@
-print("frame 1");
+// this is FRAME 0
+print("printed at frame 1 - declared at frame 0");
 let a = 0;
 
-#3
-print("should be frame 2|3|4");
+#3 // frame 1 will be executed 3 times
+print("printed at frames 2|3|4 - declared at frame 1");
 
 for 0..=1 {
-    print("frames 2|3|4|5|6|7"); 
+    print("printed at frames 2|3|4|5|6|7 - declared at frame 1 inside for loop"); 
     a = a + 1;
     print(a);
 }
 
-#
-print("Prints on frame 5");
+# // frame 4
+print("printed at frame 5 - declared at frame 4");
 print(a); // should print 4
-
 ##
 
 
+let a = true && true;
+print(a);
+
+a = true || false;
+print(a);
+
+a = true && false;
+print(a);
 
 
 let a = 1;

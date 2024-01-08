@@ -25,6 +25,11 @@ pub enum Expr {
         operator: Token,
         right: Box<Expr>,
     },
+    Logical {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
+    },
     Variable {
         id: Token,
     },
@@ -47,6 +52,7 @@ impl Display for Expr {
             Expr::Grouping { expr } => write!(format, "(group {})", expr),
             Expr::Literal { value } => write!(format, "{}", value),
             Expr::ReservedLiteral { value } => write!(format, "{}", value),
+            Expr::Logical { left, operator, right } => write!(format, "({} {} {})", operator.lexeme, left, right),
             Expr::Unary { operator, right } => write!(format, "({} {})", operator.lexeme, right),
             Expr::Variable { id } => write!(format, "(var {})", id.lexeme),
             Expr::Assign { id, value } => write!(format, "({} = {})", id.lexeme, value),
@@ -116,6 +122,31 @@ impl Expr {
             }
             Expr::Grouping { expr } => expr.eval(environment),
             Expr::Literal { value } => Ok((*value).clone()),
+            Expr::Logical { left, operator, right } => {
+                match operator.token_type {
+                    TokenType::Or => {
+                        let left_val = left.eval(environment)?;
+                        let bool_left = left_val.is_true()?;
+
+                        if bool_left == LiteralValue::Boolean(true) {
+                            Ok(left_val)
+                        } else {
+                            right.eval(environment)
+                        }
+                    },
+                    TokenType::And => {
+                        let left_val = left.eval(environment)?;
+                        let bool_left = left_val.is_true()?;
+
+                        if bool_left == LiteralValue::Boolean(false) {
+                            Ok(left_val)
+                        } else {
+                            right.eval(environment)
+                        }
+                    },
+                    _ => Err(AstError::InvalidOperator(operator.token_type).into()),
+                }
+            },
             Expr::Unary { operator, right } => {
                 let rhs = right.eval(environment)?;
 
