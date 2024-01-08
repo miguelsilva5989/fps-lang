@@ -66,8 +66,8 @@ impl Interpreter {
                         self.interpret_block(frame, stdout, else_block)?;
                     }
                 }
-                Statement::For { range: _, for_block: _ } => {
-                    panic!("ERROR - For loops not yet supported inside other statements")
+                Statement::For { expr: _, for_block: _ } => {
+                    panic!("ERROR - For loops are not yet supported inside other statements (because of FPS logic which needs to be implemented)")
 
                     // let range = range.eval(&mut self.environment)?;
                     // let mut for_blocks: Vec<Statement> = vec![];

@@ -34,9 +34,11 @@ And this is where `FPS Lang` shines at being `weird` 🤣
 print("printed at frame 1 - declared at frame 0");
 let a = 0;
 
-#3 // frame 1 will be executed 3 times
+#3 // frame 1 content will be spread out accross the next 3 frames - but special attention to the for loop!
+// this message will be printed out 3 times (at frames 2,3,4)
 print("printed at frames 2|3|4 - declared at frame 1");
 
+// each for loop iteration is a new frame, which means the inner loop statements will executed for 6 frames -> 3 (frames) * 2 (range 0..=1)
 for 0..=1 {
     print("printed at frames 2|3|4|5|6|7 - declared at frame 1 inside for loop"); 
     a = a + 1;
@@ -119,30 +121,32 @@ Execute the currently implemented tests
 ```sh
 cargo test
 
-running 21 tests
-test ast::environment::tests::assign ... ok
-test ast::environment::tests::declare_different_env ... ok
+running 23 tests
 test ast::environment::tests::declare ... ok
-test lexer::tests::single_char_tokens ... ok
-test parser::tests::test_addition ... ok
+test ast::environment::tests::assign ... ok
+test lexer::tests::comment ... ok
+test lexer::tests::unterminated_consumption ... ok
 test lexer::tests::numeric_literal ... ok
+test lexer::tests::single_char_tokens ... ok
 test parser::tests::test_comparison_paren ... ok
 test lexer::tests::types ... ok
-test lexer::tests::string_literal ... ok
-test lexer::tests::unterminated_consumption ... ok
 test lexer::tests::two_char_tokens ... ok
 test lexer::tests::identifer_literal ... ok
+test ast::environment::tests::declare_different_env ... ok
 test lexer::tests::keywords ... ok
 test parser::tests::declaration ... ok
+test interpreter::tests::multiple_frames ... ok
 test parser::tests::declaration_assign ... ok
 test parser::tests::declaration_print ... ok
-test lexer::tests::comment ... ok
-test interpreter::tests::multiple_frames ... ok
-test parser::tests::test_comparison ... ok
+test parser::tests::test_addition ... ok
 test ast::expr::tests::pretty_print_ast ... ok
+test lexer::tests::string_literal ... ok
+test parser::tests::test_logical_and ... ok
+test parser::tests::test_logical_or ... ok
 test parser::tests::test_print_statement ... ok
+test parser::tests::test_comparison ... ok
 
-test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
 
@@ -223,6 +227,8 @@ FPS 1 -> true
 ```
 
 #### For loop
+
+For loop iterations represent a frame. So, every statement inside a for loop will be executed x times across x frames
 
 ```rust
 for 0..2 { print("hello"); } ##

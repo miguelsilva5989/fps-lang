@@ -210,7 +210,7 @@ impl Parser {
             self.consume(CloseBrace, "Expected '}' after for block")?;
 
             Ok(Statement::For {
-                range: expr,
+                expr,
                 for_block: for_block,
             })
         } else {

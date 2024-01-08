@@ -50,7 +50,7 @@ impl Fps {
         match fps_statement {
             Statement::Fps(next_fps) => Ok(self.get_fps_duration_from_token(&next_fps)),
             Statement::FpsEnd(_) => Ok(1),
-            Statement::For { range, for_block: _ } => {
+            Statement::For { expr: range, for_block: _ } => {
                 let range = range.eval(environment)?;
                 match range {
                     AstLiteralValue::Range((start, end)) => Ok(end - start - 1),
@@ -81,7 +81,7 @@ impl Fps {
                 Statement::Comment(_) => {
                     // ignore
                 }
-                Statement::For { range: _, ref for_block } => {
+                Statement::For { expr: _, ref for_block } => {
                     // clear buf first (if statements before the for block?)
                     self.add_buf_statements_to_frame(&buf_fps_statements);
                     buf_fps_statements.clear();
