@@ -234,6 +234,27 @@ FPS 1 -> hello
 FPS 2 -> hello
 ```
 
+#### While loop
+
+```rust
+let a = 1;
+while a < 3 {
+    print(a);
+    a = a + 1;
+}
+
+print(a);
+
+##
+```
+
+output
+```rust
+FPS 1 -> 1
+FPS 1 -> 2
+FPS 1 -> 3
+```
+
 #### If/Else block
 
 ```rust

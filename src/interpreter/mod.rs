@@ -39,7 +39,9 @@ impl Interpreter {
                     self.environment.declare(id.lexeme, value)?;
                     // println!("{value}");
                 }
-                Statement::Block { statements: block_statements } => {
+                Statement::Block {
+                    statements: block_statements,
+                } => {
                     let mut new_env = Environment::new();
                     new_env.parent = Some(Rc::from(self.environment.clone()));
                     // println!("new_env {:?}", new_env);
@@ -50,7 +52,6 @@ impl Interpreter {
                     self.interpret_block(frame, stdout, block_statements)?;
                     // println!("old_env {:?}", old_env);
                     self.environment = old_env;
-
                 }
                 Statement::If {
                     condition,
@@ -65,28 +66,37 @@ impl Interpreter {
                         self.interpret_block(frame, stdout, else_block)?;
                     }
                 }
-                Statement::For { range: _, for_block: _ } => panic!("should no exist a the for block should be destructured into multiple statements"),
-                // Statement::For { range, for_block } => {
-                //     let range = range.eval(&mut self.environment)?;
-                //     let mut for_blocks: Vec<Statement> = vec![];
-                //     match range {
-                //         LiteralValue::Range((start, end)) => {
-                //             let range = start..end;
-                //             for _ in range {
-                //                 for_blocks.push(*for_block.clone());
-                //             }
-                //         }
-                //         LiteralValue::RangeEqual((start, end)) => {
-                //             let range = start..=end;
-                //             for _ in range {
-                //                 for_blocks.push(*for_block.clone());
-                //             }
-                //         }
-                //         _ => panic!(),
-                //     }
+                Statement::For { range: _, for_block: _ } => {
+                    panic!("ERROR - For loops not yet supported inside other statements")
 
-                //     self.interpret_block(frame, stdout, for_blocks)?;
-                // }
+                    // let range = range.eval(&mut self.environment)?;
+                    // let mut for_blocks: Vec<Statement> = vec![];
+                    // match range {
+                    //     LiteralValue::Range((start, end)) => {
+                    //         let range = start..end;
+                    //         for _ in range {
+                    //             for_blocks.extend(for_block.clone());
+                    //         }
+                    //     }
+                    //     LiteralValue::RangeEqual((start, end)) => {
+                    //         let range = start..=end;
+                    //         for _ in range {
+                    //             for_blocks.extend(for_block.clone());
+                    //         }
+                    //     }
+                    //     _ => panic!(),
+                    // }
+
+                    // self.interpret_block(frame, stdout, for_blocks)?;
+                }
+                Statement::While { condition, while_block } => {
+                    let mut cond = condition.eval(&mut self.environment)?;
+
+                    while cond.is_true()? == LiteralValue::Boolean(true) {
+                        self.interpret_block(frame, stdout, while_block.clone())?;
+                        cond = condition.eval(&mut self.environment)?;
+                    }
+                }
             };
         }
         Ok(())

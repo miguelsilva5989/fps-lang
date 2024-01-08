@@ -136,6 +136,10 @@ impl Parser {
                 self.advance();
                 self.for_statement()
             }
+            While => {
+                self.advance();
+                self.while_statement()
+            }
             _ => self.expression_statement(),
         }
     }
@@ -198,12 +202,12 @@ impl Parser {
         if self.check_next_token(Range) || self.check_next_token(RangeEqual) {
             let expr = self.expression()?;
 
-            self.consume(TokenType::OpenBrace, "Expected '{' after for range")?;
+            self.consume(OpenBrace, "Expected '{' after for range")?;
             let mut for_block: Vec<Statement> = vec![];
-            while !self.check_next_token(TokenType::CloseBrace) && !self.is_at_end() {
+            while !self.check_next_token(CloseBrace) && !self.is_at_end() {
                 for_block.push(self.declaration()?);
             }
-            self.consume(TokenType::CloseBrace, "Expected '}' after for block")?;
+            self.consume(CloseBrace, "Expected '}' after for block")?;
 
             Ok(Statement::For {
                 range: expr,
@@ -212,6 +216,20 @@ impl Parser {
         } else {
             return Err(ParserError::Consume("Expected a Range/RangeEqual after for declaration".to_owned()).into());
         }
+    }
+
+    fn while_statement(&mut self) -> Result<Statement> {
+        use TokenType::*;
+        let expr = self.expression()?;
+
+        self.consume(OpenBrace, "Expected '{' after if condition")?;
+        let mut while_block: Vec<Statement> = vec![];
+        while !self.check_next_token(CloseBrace) && !self.is_at_end() {
+            while_block.push(self.declaration()?);
+        }
+        self.consume(CloseBrace, "Expected '}' after if then block")?;
+
+        Ok(Statement::While { condition: expr, while_block }) 
     }
 
     fn expression_statement(&mut self) -> Result<Statement> {

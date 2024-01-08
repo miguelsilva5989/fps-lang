@@ -27,6 +27,7 @@ lazy_static! {
             ("if", If),
             ("else", Else),
             ("for", For),
+            ("while", While),
             ("print", Print),
             ("println", Println),
             ("true", True),
@@ -79,6 +80,7 @@ pub enum TokenType {
     If,
     Else,
     For,
+    While,
     And,
     Or,
     It, // Reference to index inside the for loop

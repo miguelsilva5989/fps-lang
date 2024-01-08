@@ -1,31 +1,9 @@
-let a = true && false;
-print(a);
+let a = 1;
+while a < 3 {
+    print(a);
+    a = a + 1;
+}
 
-a = true || false;
-print(a);
-
-a = true && false;
-print(a);
-
-a = (1 + 2) || false;
-print(a);
-
-a = (1 + 2) || true;
-print(a);
-
-a = (1 + 2) || (2 + 3);
-print(a);
-
-a = (1 + 2) && (2 + 3);
-print(a);
-
-a = (1 + 2) && false;
-print(a);
-
-a = true && "this is true";
-print(a);
-
-a = "this is true" && true;
 print(a);
 
 ##
