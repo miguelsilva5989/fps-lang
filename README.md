@@ -204,6 +204,24 @@ Ranges can also be `RangeEqual` by adding a `=` sign to the range `0..=1`
 
 - `RangeEqual` is bound inclusively below and inclusively above.
 
+#### Logical operations
+
+```rust
+let a = true && false;
+print(a);
+
+a = true || false;
+print(a);
+
+##
+```
+
+output
+```rust
+FPS 1 -> false
+FPS 1 -> true
+```
+
 #### For loop
 
 ```rust

@@ -1,4 +1,4 @@
-let a = true && true;
+let a = true && false;
 print(a);
 
 a = true || false;
