@@ -25,7 +25,7 @@ let a=1; # print(a); ## <- exit program on last frame
 frame 0 -> 'let a = 1;' will be executed on frame 1
 ```
 
-### Weird example
+### Weird language 🙃
 
 And this is where `FPS Lang` shines at being `weird` 🤣
 
@@ -242,4 +242,14 @@ let a = 1;
 output
 ```rust
 FPS 1 -> 2
+```
+
+## Error handling
+
+For error handling in `Rust` I am using [anyhow](https://docs.rs/anyhow/latest/anyhow/) and [thiserror](https://docs.rs/thiserror/latest/thiserror/).
+
+Regarding `FPS Lang` I accumulate `lexer`, `parsing` or `interpreter` errors and show them to the user
+
+```sh
+ERROR: Errors parsing: ["Invalid variable declaration: 'Could not consume: '\"Expected ';' after declaration\"''", "Could not consume: '\"Expected ';' after statement\"'"]
 ```
