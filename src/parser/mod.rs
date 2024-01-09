@@ -20,6 +20,8 @@ enum ParserError {
     InvalidAssignment,
     #[error("Errors parsing: {0:?}")]
     MultipleErrors(Vec<String>),
+    #[error("Cannot have more than 255 arguments: line {0}")]
+    MaximumArgumentNumber(usize),
 }
 
 #[derive(Debug)]
@@ -439,6 +441,46 @@ impl Parser {
         result
     }
 
+    fn finish_call(&mut self, callee: Expr) -> Result<Expr> {
+        use TokenType::*;
+        let mut arguments: Vec<Expr> = vec![];
+
+        if !self.check_next_token(CloseParen) {
+            loop {
+                let arg = self.expression()?;
+                arguments.push(arg);
+
+                if arguments.len() >= 255 {
+                    let line: usize = self.peek().line;
+                    return Err(ParserError::MaximumArgumentNumber(line).into())
+                }
+
+                if !self.match_token(Comma) {
+                    break
+                }
+            }
+        }
+
+        let paren = self.consume(CloseParen, "Expected ')' after arguments.")?;
+
+        Ok(Expr::Call { callee: Box::new(callee), paren, arguments })
+    }
+
+    fn call(&mut self) -> Result<Expr> {
+        use TokenType::*;
+        let mut expr = self.primary()?;
+
+        loop {
+            if self.match_token(OpenParen) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+
+        Ok(expr)
+    }
+
     fn unary(&mut self) -> Result<Expr> {
         use TokenType::*;
         if self.match_tokens(vec![Bang, Minus]) {
@@ -449,7 +491,7 @@ impl Parser {
                 right: Box::new(rhs),
             })
         } else {
-            self.primary()
+            self.call()
         }
     }
 

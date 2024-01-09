@@ -5,6 +5,7 @@ use std::ops::{Add, Div, Mul, Sub};
 use super::AstError;
 use crate::lexer::{self, Token, TokenType};
 
+
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum LiteralValue {
     Number(f64),

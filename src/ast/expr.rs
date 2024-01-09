@@ -40,9 +40,11 @@ pub enum Expr {
     Ignore {
         token: Token,
     },
-    // Fps {
-    //     count: f64,
-    // },
+    Call {
+        callee: Box<Expr>,
+        paren: Token,
+        arguments: Vec<Expr>
+    }
 }
 
 impl Display for Expr {
@@ -57,7 +59,8 @@ impl Display for Expr {
             Expr::Variable { id } => write!(format, "(var {})", id.lexeme),
             Expr::Assign { id, value } => write!(format, "({} = {})", id.lexeme, value),
             Expr::Ignore { token } => write!(format, "(ignored Token {})", token),
-            // Expr::Fps { count } => write!(format, "FPS count {}", count),
+            Expr::Call { callee, paren: _, arguments } => write!(format, "(fn {} {:?})", callee, arguments),
+            
         }
     }
 }
@@ -178,7 +181,9 @@ impl Expr {
                 println!("TODO implement IT inside for loop. {}", value);
                 todo!()
             },
-            // Expr::Fps { count } => Ok(LiteralValue::Number(*count)),
+            Expr::Call { callee, paren, arguments } => {
+                todo!()
+            },
         }
     }
 }

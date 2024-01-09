@@ -23,6 +23,7 @@ lazy_static! {
         use TokenType::*;
         HashMap::from([
             ("let", Declaration),
+            ("fn", FunctionDeclaration),
             ("it", It), // Reference to index inside the for loop
             ("if", If),
             ("else", Else),
@@ -42,6 +43,7 @@ pub enum TokenType {
     // single char
     Fps,    // #
     FpsEnd, // ## End program
+    Comma,
     Semicolon,
     Colon,
     OpenParen,
@@ -76,6 +78,7 @@ pub enum TokenType {
     Number,
 
     // keywords
+    FunctionDeclaration, // fn
     Declaration, // let
     If,
     Else,
@@ -422,6 +425,7 @@ impl<'a> FpsInput<'a> {
                 }
                 // single char
                 ':' => self.create_token(Colon, ch.into(), None),
+                ',' => self.create_token(Comma, ch.into(), None),
                 ';' => self.create_token(Semicolon, ch.into(), None),
                 '(' => self.create_token(OpenParen, ch.into(), None),
                 ')' => self.create_token(CloseParen, ch.into(), None),
